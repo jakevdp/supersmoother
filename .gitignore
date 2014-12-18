@@ -55,3 +55,4 @@ target/
 
 # emacs files
 *~
+.#*
