@@ -64,21 +64,28 @@ class Smoother(object):
     def _predict_batch(self, t):
         raise NotImplementedError()
 
-    def cross_validate(self, ret_y=False):
-        # Don't use first or last entry (extrapolation is bad...)
-        y_cv = np.zeros_like(self.t)
+    def cross_validate(self, ret_y=False, slow=False, imin=1, imax=-1):
+        sl = slice(imin, imax)
 
-        for ind in range(1, len(self.t) - 1):
-            imin, imax = self._imin_imax(ind)
-            y_cv[ind] = self._cross_validate_single(ind, imin, imax)
+        if not slow:
+            try:
+                y_cv = self._cross_validate_batch(sl)
+                self._cv_type = 'fast'
+            except NotImplementedError:
+                slow = True
+        
+        if slow:
+            y_cv = np.fromiter(map(self._cross_validate_single,
+                                   range(*sl.indices(len(self.t)))),
+                               dtype=float, count=len(self.t[sl]))
+            self._cv_type = 'slow'
 
         if ret_y:
             return y_cv
         else:
-            return np.mean((self.y[1:-1] - y_cv[1:-1]) ** 2
-                           / self.dy[1:-1] ** 2)
+            return np.mean((self.y[sl] - y_cv) ** 2 / self.dy[sl] ** 2)
 
-    def _cross_validate_single(self, ind, imin, imax):
+    def _cross_validate_single(self, ind):
         raise NotImplementedError()
 
 
@@ -106,10 +113,16 @@ class MovingAverageSmoother(Smoother):
         ind = np.minimum(np.searchsorted(self.t, t), len(self.t) - 1)
         return self._fit_params['ywsum'][ind] / self._fit_params['wsum'][ind]
 
-    def _cross_validate_single(self, ind, imin, imax):
+    def _cross_validate_single(self, ind):
+        imin, imax = self._imin_imax(ind)
         ys, dys = [np.concatenate([a[imin: ind], a[ind + 1: imax]])
                    for a in [self.y, self.dy]]
         return np.dot(ys, dys ** -2) / np.sum(dys ** -2)
+
+    def _cross_validate_batch(self, sl):
+        ywsum = self._fit_params['ywsum'][sl] - self._fit_params['yw'][sl]
+        wsum = self._fit_params['wsum'][sl] - self._fit_params['w'][sl]
+        return ywsum / wsum
 
 
 class LinearSmoother(Smoother):
@@ -152,7 +165,8 @@ class LinearSmoother(Smoother):
 
         return (slope * t + intercept) / denominator
         
-    def _cross_validate_single(self, ind, imin, imax):
+    def _cross_validate_single(self, ind):
+        imin, imax = self._imin_imax(ind)
         ts, ys, dys = [np.concatenate([a[imin: ind], a[ind + 1: imax]])
                        for a in [self.t, self.y, self.dy]]
 
@@ -161,4 +175,14 @@ class LinearSmoother(Smoother):
 
         theta = np.linalg.solve(np.dot(X.T, X), np.dot(X.T, y))
         return theta[0] + theta[1] * self.t[ind]
+
+    def _cross_validate_batch(self, sl):
+        vals = (self._fit_params[key + 'sum'] - self._fit_params[key]
+                for key in ['w', 'tw', 'yw', 'tt', 'ty'])
+
+        w, tw, yw, tt, ty = (v[sl] for v in vals)
+        denominator = (w * tt - tw * tw)
+        slope = (ty * w - tw * yw)
+        intercept = (tt * yw - ty * tw)
         
+        return (slope * self.t[sl] + intercept) / denominator
