@@ -10,9 +10,12 @@ class Smoother(object):
     def _window(a, window, mode='same'):
         if hasattr(window, '__len__'):
             assert len(window) == len(a)
-            return np.fromiter((a[max(0, i - w // 2): i - w // 2 + w].sum()
-                                for i, w in enumerate(window)),
-                               dtype=float, count=len(a))
+            N = len(a)
+            window = np.asarray(window)
+            mins = np.arange(len(a)) - window // 2
+            ranges = np.vstack([np.maximum(0, mins),
+                                np.minimum(len(a), mins + window)]).ravel('F')
+            return np.add.reduceat(np.append(a, 0), ranges)[::2]
         else:
             # TODO: switch to fftconvolve when it will make a difference
             return np.convolve(a, np.ones(window), mode=mode)

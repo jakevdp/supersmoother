@@ -127,6 +127,11 @@ def test_multiple_spans():
 
 def test_variable_spans():
     t, y, dy = make_sine(rseed=1)
+
+    isort = np.argsort(t)
+    t = t[isort]
+    y = y[isort]
+
     spans = np.array([0.05, 0.2, 0.5])
     indices = np.arange(len(t)) % 3
     mixed_span = spans[indices]
@@ -134,4 +139,6 @@ def test_variable_spans():
     base_model = np.array([LinearSmoother(span).fit(t, y, dy).predict(t)
                            for span in spans])
     mixed_model = LinearSmoother(mixed_span).fit(t, y, dy).predict(t)
-    assert_allclose(mixed_model, base_model[indices, np.arange(len(t))])
+
+    assert_allclose(mixed_model, base_model[indices, np.arange(len(t))],
+                    atol=1E-6)
