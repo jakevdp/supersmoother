@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less
+from numpy.testing import assert_allclose, assert_array_less, assert_equal
 
 from .. import MovingAverageSmoother, LinearSmoother
 
@@ -19,7 +19,7 @@ def make_sine(N=100, err=0.05, rseed=None):
     return t, y, err
 
 
-def test_sine_linear():
+def test_sine():
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
     tfit = np.linspace(1, 5.3, 50)
@@ -39,7 +39,7 @@ def test_sine_linear():
             yield check_model, Model, span, err
 
 
-def test_smooth_linear():
+def test_line_linear():
     # create data y=t with small amount of error to prevent singular matrices
     rng = np.random.RandomState(0)
     t = 10 * rng.rand(100)
@@ -56,3 +56,21 @@ def test_smooth_linear():
 
     for span in [0.05, 0.2, 0.5]:
         yield check_model, span
+
+
+def test_sine_fast():
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+
+    tfit = np.linspace(1, 5.3, 50)
+    ytrue = np.sin(tfit)
+
+    def check_model(Model, span):
+        model = Model(span).fit(t, y, dy)
+        yfit1 = model.predict(tfit)
+        assert_equal(model._predict_type, 'fast')
+        yfit2 = model.predict(tfit, slow=True)
+        assert_equal(model._predict_type, 'slow')
+        assert_allclose(yfit1, yfit2)
+
+    for span in [0.05, 0.2, 0.5]:
+        yield check_model, MovingAverageSmoother, span

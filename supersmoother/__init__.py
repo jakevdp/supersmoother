@@ -1,1 +1,1 @@
-from .smoother import MovingAverageSmoother, LinearSmoother
+from .smoother import (MovingAverageSmoother, LinearSmoother)
