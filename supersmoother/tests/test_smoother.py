@@ -27,7 +27,7 @@ def test_sine():
 
     def check_model(Model, span, err):
         model = Model(span).fit(t, y, dy)
-        yfit = model.predict(tfit)
+        yfit = model.predict(tfit, slow=True)
         obs_err = np.mean((yfit - ytrue) ** 2)
         assert_array_less(obs_err, err)
 
@@ -50,7 +50,7 @@ def test_line_linear():
 
     def check_model(span):
         model = LinearSmoother(span).fit(t, y, dy)
-        yfit = model.predict(tfit)
+        yfit = model.predict(tfit, slow=True)
         print(np.max(abs(yfit - tfit)))
         assert_allclose(tfit, yfit, atol=1E-5)
 
@@ -72,5 +72,6 @@ def test_sine_fast():
         assert_equal(model._predict_type, 'slow')
         assert_allclose(yfit1, yfit2)
 
-    for span in [0.05, 0.2, 0.5]:
-        yield check_model, MovingAverageSmoother, span
+    for Model in (MovingAverageSmoother, LinearSmoother):
+        for span in [0.05, 0.2, 0.5]:
+            yield check_model, Model, span

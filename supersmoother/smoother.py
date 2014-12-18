@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 
 import numpy as np
-from scipy.signal import fftconvolve
 
 
 class Smoother(object):
@@ -23,7 +22,7 @@ class Smoother(object):
         i_sort = np.argsort(self.t)
         self.t = self.t[i_sort]
         self.y = self.y[i_sort]
-        self.d = self.dy[i_sort]
+        self.dy = self.dy[i_sort]
 
     def _set_span(self):
         # Full span needs to be at least 3, or cross-validation will fail.
@@ -40,7 +39,7 @@ class Smoother(object):
         imax = np.minimum(len(self.t), ind + self.upperspan)
         return imin, imax
 
-    def predict(self, t, slow=False):
+    def predict(self, t, slow=None):
         t = np.asarray(t)
         outshape = t.shape
         t = t.ravel()
@@ -49,7 +48,7 @@ class Smoother(object):
             try:
                 out = self._predict_batch(t)
                 self._predict_type = 'fast'
-            except:
+            except NotImplementedError:
                 slow = True
 
         if slow:
@@ -91,11 +90,10 @@ class MovingAverageSmoother(Smoother):
     def _fit(self):
         window = np.ones(self.fullspan)
         w = self.dy ** -2
-        yw = self.y * w
-        self._fit_params = {'w': w,
-                            'yw': yw,
-                            'wsum': fftconvolve(w, window, 'same'),
-                            'ywsum': fftconvolve(yw, window, 'same')}
+        self._fit_params = {'w': w, 'yw': self.y * w}
+        self._fit_params.update(
+            dict([(key + 'sum', np.convolve(val, window, 'same'))
+                  for key, val in self._fit_params.items()]))
 
     def _predict_single(self, t):
         ind = np.searchsorted(self.t, t)
@@ -105,7 +103,7 @@ class MovingAverageSmoother(Smoother):
                 np.sum(self.dy[sl] ** -2))
 
     def _predict_batch(self, t):
-        ind = np.searchsorted(self.t, t)
+        ind = np.minimum(np.searchsorted(self.t, t), len(self.t) - 1)
         return self._fit_params['ywsum'][ind] / self._fit_params['wsum'][ind]
 
     def _cross_validate_single(self, ind, imin, imax):
@@ -119,14 +117,22 @@ class LinearSmoother(Smoother):
     def __init__(self, span=0.05):
         self.span = span
 
+    def _fit(self):
+        window = np.ones(self.fullspan)
+        w = self.dy ** -2
+        self._fit_params = {'w': w,
+                            'tw': self.t * w, 'yw': self.y * w,
+                            'tt': self.t * self.t * w,
+                            'ty': self.t * self.y * w}
+        self._fit_params.update(
+            dict([(key + 'sum', np.convolve(val, window, 'same'))
+                  for key, val in self._fit_params.items()]))
+
     def _predict_single(self, t):
         ind = np.searchsorted(self.t, t)
         imin, imax = self._imin_imax(ind)
         sl = slice(imin, imax)
-
-        ts = self.t[sl]
-        ys = self.y[sl]
-        dys = self.dy[sl]
+        ts, ys, dys = self.t[sl], self.y[sl], self.dy[sl]
 
         X = np.transpose(np.vstack([np.ones_like(ts), ts]) / dys)
         y = ys / dys
@@ -134,6 +140,18 @@ class LinearSmoother(Smoother):
         theta = np.linalg.solve(np.dot(X.T, X), np.dot(X.T, y))
         return theta[0] + theta[1] * t
 
+    def _predict_batch(self, t):
+        ind = np.minimum(np.searchsorted(self.t, t), len(self.t) - 1)
+        vals = (self._fit_params[key + 'sum']
+                for key in ['w', 'tw', 'yw', 'tt', 'ty'])
+
+        w, tw, yw, tt, ty = (v[ind] for v in vals)
+        denominator = (w * tt - tw * tw)
+        slope = (ty * w - tw * yw)
+        intercept = (tt * yw - ty * tw)
+
+        return (slope * t + intercept) / denominator
+        
     def _cross_validate_single(self, ind, imin, imax):
         ts, ys, dys = [np.concatenate([a[imin: ind], a[ind + 1: imax]])
                        for a in [self.t, self.y, self.dy]]
