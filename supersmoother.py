@@ -27,7 +27,10 @@ class Smoother(object):
         self.dysorted_ = self.dy[i_sort]
 
     def _set_span(self):
-        self.halfspan = int(max(1, (self.span * len(self.t)) // 2))
+        # Full span needs to be at least 3, or cross-validation will fail.
+        halfspan = int(max(1, (self.span * len(self.t)) // 2))
+        self.lowerspan = halfspan
+        self.upperspan = halfspan + 1
 
     def _fit(self):
         raise NotImplementedError()
@@ -36,8 +39,8 @@ class Smoother(object):
         t = np.asarray(t)
         outshape = t.shape
         ind = np.searchsorted(self.tsorted_, t.ravel())
-        imin = np.maximum(0, ind - self.halfspan)
-        imax = np.minimum(len(self.tsorted_), ind + self.halfspan)
+        imin = np.maximum(0, ind - self.lowerspan)
+        imax = np.minimum(len(self.tsorted_), ind + self.upperspan)
         return self._predict_batch(t.ravel(), imin, imax).reshape(outshape)
 
     def _predict_batch(self, t, imin, imax):
@@ -49,24 +52,35 @@ class Smoother(object):
         out = np.zeros(t.size)
         for i, ti in enumerate(t.ravel()):
             ind = np.searchsorted(self.tsorted_, ti)
-            imin = max(0, ind - self.halfspan)
-            imax = ind + self.halfspan
+            imin = max(0, ind - self.lowerspan)
+            imax = ind + self.upperspan
             out[i] = self._predict_single(ti, imin, imax)
         return out.reshape(outshape)
 
     def _predict_single(self, t, imin, imax):
         raise NotImplementedError()
 
+    def cross_validate_slow(self, t, y, dy):
+        self.fit(t, y, dy)
+        t, y, dy = self.tsorted_, self.ysorted_, self.dysorted_
+        remove_i = lambda a, i: np.concatenate([a[:i], a[i + 1:]])
+        y_cv = np.zeros(t.size)
+        for i in range(1, len(t) - 1):
+            self.fit(remove_i(t, i), remove_i(y, i), remove_i(dy, i))
+            self.upperspan -= 1
+            y_cv[i] = self.predict(t[i])
+        return np.mean(((y - y_cv) / dy) ** 2)
+
 
 class MovingAverageSmoother(Smoother):
-    """A simple fixed-span moving average smoother"""
+    """Fixed-span moving average smoother"""
     def __init__(self, span=0.05):
         self.span = span
 
     def _fit(self):
-        yw = self.ysorted_ / self.dysorted_
         w = 1. / self.dysorted_
-        self.fit_data_ = [np.concatenate([[0], np.cumsum(yw * w)]),
+        y = self.ysorted_ / self.dysorted_
+        self.fit_data_ = [np.concatenate([[0], np.cumsum(y * w)]),
                           np.concatenate([[0], np.cumsum(w * w)])]
 
     def _predict_batch(self, t, imin, imax):
@@ -80,8 +94,8 @@ class MovingAverageSmoother(Smoother):
                 np.sum(self.dysorted_[sl] ** -2))
 
 
-class FixedSpanSmoother(Smoother):
-    """A simple fixed-span linear smoother"""
+class LinearSmoother(Smoother):
+    """Fixed-span linear smoother"""
     def __init__(self, span=0.05):
         self.span = span
     
