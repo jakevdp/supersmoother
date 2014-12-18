@@ -1,20 +1,33 @@
 from __future__ import division, print_function
-
 import numpy as np
+
+__all__ = ['FloatingMeanSmoother', 'LinearSmoother']
 
 
 class Smoother(object):
     """Smoother base class"""
+    @staticmethod
+    def _window(a, window, mode='same'):
+        if hasattr(window, '__len__'):
+            assert len(window) == len(a)
+            return np.fromiter((a[max(0, i - w // 2): i - w // 2 + w].sum()
+                                for i, w in enumerate(window)),
+                               dtype=float, count=len(a))
+        else:
+            # TODO: switch to fftconvolve when it will make a difference
+            return np.convolve(a, np.ones(window), mode=mode)
+
     def __init__(self):
         raise NotImplementedError()
 
     def fit(self, t, y, dy, sort_inputs=True):
         self.t, self.y, self.dy = np.broadcast_arrays(t, y, dy)
-        
+        self.sort_inputs = sort_inputs
+
+        self._set_span()
         if sort_inputs:
             self._sort_inputs()
 
-        self._set_span()
         self._fit()
         return self
 
@@ -24,19 +37,28 @@ class Smoother(object):
         self.y = self.y[i_sort]
         self.dy = self.dy[i_sort]
 
+        if hasattr(self.span, '__len__'):
+            self.halfspan = self.halfspan[i_sort]
+            self.fullspan = self.fullspan[i_sort]
+
     def _set_span(self):
         # Full span needs to be at least 3, or cross-validation will fail.
-        self.halfspan = int(max(1, (self.span * len(self.t)) // 2))
-        self.lowerspan = self.halfspan
-        self.upperspan = self.halfspan + 1
+        self.halfspan = np.maximum(
+            (self.span * len(self.t)) // 2, 1).astype(int)
         self.fullspan = 2 * self.halfspan + 1
 
     def _fit(self):
         pass
 
     def _imin_imax(self, ind):
-        imin = np.maximum(0, ind - self.lowerspan)
-        imax = np.minimum(len(self.t), ind + self.upperspan)
+        # In case halfspan is an array, try this:
+        if hasattr(self.halfspan, '__len__'):
+            halfspan = self.halfspan[ind]
+        else:
+            halfspan = self.halfspan
+
+        imin = np.maximum(0, ind - halfspan)
+        imax = np.minimum(len(self.t), ind + halfspan + 1)
         return imin, imax
 
     def predict(self, t, slow=None):
@@ -95,11 +117,10 @@ class MovingAverageSmoother(Smoother):
         self.span = span
 
     def _fit(self):
-        window = np.ones(self.fullspan)
         w = self.dy ** -2
         self._fit_params = {'w': w, 'yw': self.y * w}
         self._fit_params.update(
-            dict([(key + 'sum', np.convolve(val, window, 'same'))
+            dict([(key + 'sum', self._window(val, self.fullspan))
                   for key, val in self._fit_params.items()]))
 
     def _predict_single(self, t):
@@ -131,14 +152,13 @@ class LinearSmoother(Smoother):
         self.span = span
 
     def _fit(self):
-        window = np.ones(self.fullspan)
         w = self.dy ** -2
         self._fit_params = {'w': w,
                             'tw': self.t * w, 'yw': self.y * w,
                             'tt': self.t * self.t * w,
                             'ty': self.t * self.y * w}
         self._fit_params.update(
-            dict([(key + 'sum', np.convolve(val, window, 'same'))
+            dict([(key + 'sum', self._window(val, self.fullspan))
                   for key, val in self._fit_params.items()]))
 
     def _predict_single(self, t):

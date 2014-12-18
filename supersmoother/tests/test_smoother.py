@@ -69,7 +69,6 @@ def test_line_linear():
     def check_model(span):
         model = LinearSmoother(span).fit(t, y, dy)
         yfit = model.predict(tfit)
-        print(np.max(abs(yfit - tfit)))
         assert_allclose(tfit, yfit, atol=1E-5)
 
     for span in [0.05, 0.2, 0.5]:
@@ -113,3 +112,26 @@ def test_sine_compare_cv():
     for Model in [MovingAverageSmoother, LinearSmoother]:
         for span, err in zip(spans, errs):
             yield check_model, Model, span, err
+
+
+def test_multiple_spans():
+    t, y, dy = make_sine(rseed=1)
+    tfit = np.linspace(0, 2)
+
+    model1 = LinearSmoother(span=0.1)
+    model2 = LinearSmoother(span=0.1 * np.ones(len(t)))
+
+    assert_allclose(model1.fit(t, y, dy).predict(tfit),
+                    model2.fit(t, y, dy).predict(tfit))
+
+
+def test_variable_spans():
+    t, y, dy = make_sine(rseed=1)
+    spans = np.array([0.05, 0.2, 0.5])
+    indices = np.arange(len(t)) % 3
+    mixed_span = spans[indices]
+
+    base_model = np.array([LinearSmoother(span).fit(t, y, dy).predict(t)
+                           for span in spans])
+    mixed_model = LinearSmoother(mixed_span).fit(t, y, dy).predict(t)
+    assert_allclose(mixed_model, base_model[indices, np.arange(len(t))])
