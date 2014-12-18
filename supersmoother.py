@@ -14,8 +14,9 @@ class Smoother(object):
         self.t = t
         self.y = y
         self.dy = dy
-        
+    
         self._sort_inputs()
+        self._set_span()
         self._fit()
         return self
 
@@ -24,6 +25,9 @@ class Smoother(object):
         self.tsorted_ = self.t[i_sort]
         self.ysorted_ = self.y[i_sort]
         self.dysorted_ = self.dy[i_sort]
+
+    def _set_span(self):
+        self.halfspan = int(max(1, (self.span * len(self.t)) // 2))
 
     def _fit(self):
         raise NotImplementedError()
@@ -45,12 +49,12 @@ class Smoother(object):
         out = np.zeros(t.size)
         for i, ti in enumerate(t.ravel()):
             ind = np.searchsorted(self.tsorted_, ti)
-            sl = slice(max(0, ind - self.halfspan),
-                       ind + self.halfspan)
-            out[i] = self._predict_single(ti, sl)
+            imin = max(0, ind - self.halfspan)
+            imax = ind + self.halfspan
+            out[i] = self._predict_single(ti, imin, imax)
         return out.reshape(outshape)
 
-    def _predict_single(self, t, sl):
+    def _predict_single(self, t, imin, imax):
         raise NotImplementedError()
 
 
@@ -60,18 +64,18 @@ class MovingAverageSmoother(Smoother):
         self.span = span
 
     def _fit(self):
-        self.halfspan = int(max(1, (self.span * len(self.t)) // 2))
-        ws = 1. / self.dysorted_ ** 2
-
-        self.fit_data_ = [np.concatenate([[0], (ws * self.ysorted_).cumsum()]),
-                          np.concatenate([[0], ws.cumsum()])]
+        yw = self.ysorted_ / self.dysorted_
+        w = 1. / self.dysorted_
+        self.fit_data_ = [np.concatenate([[0], np.cumsum(yw * w)]),
+                          np.concatenate([[0], np.cumsum(w * w)])]
 
     def _predict_batch(self, t, imin, imax):
         numerator, denominator = [a[imax] - a[imin]
                                   for a in self.fit_data_]
         return numerator / denominator
 
-    def _predict_single(self, t, sl):
+    def _predict_single(self, t, imin, imax):
+        sl = slice(imin, imax)
         return (np.dot(self.ysorted_[sl], self.dysorted_[sl] ** -2) / 
                 np.sum(self.dysorted_[sl] ** -2))
 
@@ -82,8 +86,6 @@ class FixedSpanSmoother(Smoother):
         self.span = span
     
     def _fit(self):
-        self.halfspan = int(max(1, (self.span * len(self.t)) // 2))
-
         w = 1. / self.dysorted_
         x = self.tsorted_ / self.dysorted_
         y = self.ysorted_ / self.dysorted_
@@ -103,7 +105,9 @@ class FixedSpanSmoother(Smoother):
 
         return slope * t + intercept        
 
-    def _predict_single(self, t, sl):
+    def _predict_single(self, t, imin, imax):
+        sl = slice(imin, imax)
+
         ts = self.tsorted_[sl]
         ys = self.ysorted_[sl]
         dys = self.dysorted_[sl]
@@ -113,14 +117,3 @@ class FixedSpanSmoother(Smoother):
 
         theta = np.linalg.solve(np.dot(X.T, X), np.dot(X.T, y))
         return theta[0] + theta[1] * t
-
-
-class SuperSmoother(Smoother):
-    def __init__(self):
-        pass
-
-    def predict(self,t):
-        pass
-
-    def get_spans(self):
-        pass
