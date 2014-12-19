@@ -194,7 +194,7 @@ class MovingAverageVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
     fixed = MovingAverageFixedSpan
 
 
-class LinearVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
+class LinearVariableSpan(VariableSpanMixin, LinearFixedSpan):
     fixed = LinearFixedSpan
 
 
