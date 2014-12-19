@@ -191,11 +191,11 @@ class VariableSpanMixin(object):
 
 
 class MovingAverageVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
-    pass
+    fixed = MovingAverageFixedSpan
 
 
 class LinearVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
-    pass
+    fixed = LinearFixedSpan
 
 
 class Smoother(object):
