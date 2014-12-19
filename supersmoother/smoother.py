@@ -43,10 +43,10 @@ class BaseSmoother(object):
 
 class BaseFixedSpanSlow(BaseSmoother):
     def __init__(self, span):
-        self._input_span = span
+        self.span = span
 
     def _fit(self, presorted=False):
-        self._set_span(self._input_span)
+        self._set_span(self.span)
         
     def _set_span(self, span):
         self.span = span
@@ -88,7 +88,7 @@ class BaseFixedSpanSlow(BaseSmoother):
 
 class BaseFixedSpan(BaseFixedSpanSlow):
     def _fit(self, presorted=False):
-        self._set_span(self._input_span)
+        self._set_span(self.span)
         self._prepare_calcs()
 
     def _windowed_sum(self, a, window):
@@ -169,7 +169,7 @@ class LinearFixedSpan(BaseFixedSpan):
             return slope[i] * t + intercept[i]
 
 
-class MovingAverageVariableSpan(MovingAverageFixedSpan):
+class VariableSpanMixin(object):
     def __init__(self, span):
         self._input_span = span
 
@@ -188,7 +188,14 @@ class MovingAverageVariableSpan(MovingAverageFixedSpan):
         ranges = np.vstack([np.maximum(0, mins),
                             np.minimum(len(a), mins + window)]).ravel('F')
         return np.add.reduceat(np.append(a, 0), ranges)[::2]
-        
+
+
+class MovingAverageVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
+    pass
+
+
+class LinearVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
+    pass
 
 
 class Smoother(object):
