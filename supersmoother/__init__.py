@@ -1,2 +1,3 @@
-from .smoother import MovingAverageSmoother, LinearSmoother
+from .smoother import (MovingAverageFixedSpan, MovingAverageVariableSpan,
+                       LinearFixedSpan, LinearVariableSpan)
 from .supersmoother import SuperSmoother

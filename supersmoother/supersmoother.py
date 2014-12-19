@@ -1,8 +1,8 @@
 import numpy as np
-from .smoother import LinearSmoother
+from .smoother import LinearVariableSpan
 
 
-class SuperSmoother(LinearSmoother):
+class SuperSmoother(LinearVariableSpan):
     """
     SuperSmoother, as described in [1]
 
@@ -29,7 +29,7 @@ class SuperSmoother(LinearSmoother):
             primary_spans = self.default_spans
         self.primary_spans = np.sort(primary_spans)
         self.middle_span = primary_spans[len(primary_spans) // 2]
-        self.primary_smooths = [LinearSmoother(span) for span in primary_spans]
+        self.primary_smooths = [LinearVariableSpan(span) for span in primary_spans]
         self.span = self.middle_span
 
     def _fit(self):
@@ -39,11 +39,11 @@ class SuperSmoother(LinearSmoother):
         resids = [smoother.fit(t, y, dy,
                                sort_inputs=False).crossval_residuals()
                   for smoother in self.primary_smooths]
-        smoothed_resids = np.array([LinearSmoother(self.middle_span)
+        smoothed_resids = np.array([LinearVariableSpan(self.middle_span)
                                     .fit(t, abs(resid), 1, sort_inputs=False)
                                     .predict(t) for resid in resids])
         best_spans = self.primary_spans[np.argmin(smoothed_resids, 0)]
-        smoothed_spans = LinearSmoother(self.middle_span)\
+        smoothed_spans = LinearVariableSpan(self.middle_span)\
             .fit(t, best_spans, 1, sort_inputs=False).predict(t)
 
         self.resids = resids
@@ -51,4 +51,4 @@ class SuperSmoother(LinearSmoother):
         self.best_spans = best_spans
         self.span = smoothed_spans
         self._set_span(smoothed_spans, sort=False)
-        LinearSmoother._fit(self)            
+        LinearVariableSpan._fit(self)            

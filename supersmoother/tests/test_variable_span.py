@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less, assert_equal
 
-from ..smoother import MovingAverageVariableSpan, LinearVariableSpan
+from .. import MovingAverageVariableSpan, LinearVariableSpan
 
 
 def make_sine(N=100, err=0.05, rseed=None):

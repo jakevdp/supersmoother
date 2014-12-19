@@ -1,10 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less, assert_equal
 
-from ..smoother import (MovingAverageFixedSpan,
-                        MovingAverageFixedSpanSlow,
-                        LinearFixedSpan,
-                        LinearFixedSpanSlow)
+from .. import MovingAverageFixedSpan, LinearFixedSpan
 
 
 def make_sine(N=100, err=0.05, rseed=None):
@@ -36,8 +33,7 @@ def test_sine():
     spans = [0.05, 0.2, 0.5]
     errs = [0.005, 0.01, 0.1]
 
-    for Model in [MovingAverageFixedSpanSlow,
-                  LinearFixedSpanSlow]:
+    for Model in [MovingAverageFixedSpan, LinearFixedSpan]:
         for span, err in zip(spans, errs):
             yield check_model, Model, span, err
 
@@ -55,8 +51,7 @@ def test_sine_cv():
     spans = [0.05, 0.2, 0.5]
     errs = [0.005, 0.02, 0.1]
 
-    for Model in [MovingAverageFixedSpanSlow,
-                  LinearFixedSpanSlow]:
+    for Model in [MovingAverageFixedSpan, LinearFixedSpan]:
         for span, err in zip(spans, errs):
             yield check_model, Model, span, err
 
@@ -66,7 +61,7 @@ def test_line_linear():
     tfit = np.linspace(0, 10, 40)
 
     def check_model(span):
-        model = LinearFixedSpanSlow(span).fit(t, y, dy)
+        model = LinearFixedSpan(span).fit(t, y, dy)
         yfit = model.predict(tfit)
         assert_allclose(tfit, yfit, atol=1E-5)
 
