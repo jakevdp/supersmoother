@@ -24,30 +24,33 @@ class Smoother(object):
         raise NotImplementedError()
 
     def fit(self, t, y, dy, sort_inputs=True):
-        self.t, self.y, self.dy = np.broadcast_arrays(t, y, dy)
-        self.sort_inputs = sort_inputs
+        self._fit_data = np.broadcast_arrays(t, y, dy)
+        t, y, dy = self._fit_data
+
+        if sort_inputs:
+            self.i_sort = np.argsort(t)
+            self.t = t[self.i_sort]
+            self.y = y[self.i_sort]
+            self.dy = dy[self.i_sort]
+        else:
+            self.i_sort = np.arange(len(t))
+            self.t = t
+            self.y = y
+            self.dy = dy
 
         self._set_span()
-        if sort_inputs:
-            self._sort_inputs()
-
         self._fit()
         return self
 
-    def _sort_inputs(self):
-        i_sort = np.argsort(self.t)
-        self.t = self.t[i_sort]
-        self.y = self.y[i_sort]
-        self.dy = self.dy[i_sort]
-
-        if hasattr(self.span, '__len__'):
-            self.halfspan = self.halfspan[i_sort]
-            self.fullspan = self.fullspan[i_sort]
-
-    def _set_span(self):
+    def _set_span(self, span=None, sort=True):
         # Full span needs to be at least 3, or cross-validation will fail.
+        if span is not None:
+            self.span = span
+        self.processed_span = self.span
+        if sort and hasattr(self.span, '__len__'):
+            self.processed_span = self.span[self.i_sort]
         self.halfspan = np.maximum(
-            (self.span * len(self.t)) // 2, 1).astype(int)
+            (self.processed_span * len(self.t)) // 2, 1).astype(int)
         self.fullspan = 2 * self.halfspan + 1
 
     def _fit(self):
@@ -89,7 +92,8 @@ class Smoother(object):
     def _predict_batch(self, t):
         raise NotImplementedError()
 
-    def cross_validate(self, ret_y=False, slow=False, imin=1, imax=-1):
+    def cross_validate(self, ret_y=False, ret_resids=False,
+                       slow=False, imin=1, imax=-1):
         sl = slice(imin, imax)
 
         if not slow:
@@ -107,11 +111,17 @@ class Smoother(object):
 
         if ret_y:
             return y_cv
+        elif ret_resids:
+            return self.y[sl] - y_cv
         else:
             return np.mean((self.y[sl] - y_cv) ** 2 / self.dy[sl] ** 2)
 
     def _cross_validate_single(self, ind):
         raise NotImplementedError()
+
+    def crossval_residuals(self, slow=False, imin=0, imax=None):
+        return self.cross_validate(ret_resids=True,
+                                   slow=slow, imin=imin, imax=imax)
 
 
 class MovingAverageSmoother(Smoother):

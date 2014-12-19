@@ -45,7 +45,7 @@ def test_sine_cv():
 
     def check_model(Model, span, err):
         model = Model(span).fit(t, y, dy)
-        yfit = model.cross_validate(ret_y=True)
+        yfit = model.cross_validate(ret_y=True, imin=1, imax=-1)
         obs_err = np.mean((yfit - ytrue) ** 2)
         assert_array_less(obs_err, err)
 
