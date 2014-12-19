@@ -41,7 +41,7 @@ class BaseSmoother(object):
         return np.mean(resids ** 2)
 
 
-class BaseFixedSpanSlow(BaseSmoother):
+class BaseFixedSpan(BaseSmoother):
     def __init__(self, span):
         self.span = span
 
@@ -61,13 +61,17 @@ class BaseFixedSpanSlow(BaseSmoother):
         imax = int(imin + 2 * self.halfspan + 1)
         return max(0, imin), min(len(self.t), imax)
 
+
+class SlowFixedSpan(BaseFixedSpan):
     def cv_values(self, imin=0, imax=None):
         start, stop, step = slice(imin, imax).indices(len(self.t))
         return np.fromiter(map(self._cv_at_index, range(start, stop, step)),
                            dtype=float, count=len(self.t[imin:imax]))
 
-    def _make_prediction(self, t, tsamp, ysamp, dysamp):
-        raise NotImplementedError()
+    def predict(self, t):
+        t = np.asarray(t)
+        return np.fromiter(map(self._predict_at_val, t.ravel()),
+                           dtype=float, count=t.size).reshape(t.shape)
         
     def _cv_at_index(self, i):
         imin, imax = self._imin_imax(i)
@@ -75,18 +79,19 @@ class BaseFixedSpanSlow(BaseSmoother):
                 for a in [self.t, self.y, self.dy]]
         return self._make_prediction(self.t[i], *args)
 
-    def predict(self, t):
-        t = np.asarray(t)
-        return np.fromiter(map(self._predict_at_val, t.ravel()),
-                           dtype=float, count=t.size).reshape(t.shape)
-
     def _predict_at_val(self, t):
         imin, imax = self._imin_imax(self._find_indices(self.t, t))
         args = [a[imin:imax] for a in (self.t, self.y, self.dy)]
         return self._make_prediction(t, *args)
 
 
-class BaseFixedSpan(BaseFixedSpanSlow):
+class FastFixedSpan(BaseFixedSpan):
+    def cv_values(self, imin=0, imax=None):
+        return self._predict_on('cv', sl=slice(imin, imax))
+
+    def predict(self, t):
+        return self._predict_on('sum', t=t)
+
     def _fit(self, presorted=False):
         self._set_span(self.span)
         self._prepare_calcs()
@@ -107,23 +112,14 @@ class BaseFixedSpan(BaseFixedSpanSlow):
 
         self._fit_params = fit_params
 
-    def cv_values(self, imin=0, imax=None):
-        return self._predict_on('cv', sl=slice(imin, imax))
 
-    def predict(self, t):
-        return self._predict_on('sum', t=t)
-
-    def _predict_on(self, suffix, t=None, sl=slice(None)):
-        raise NotImplementedError()
-
-
-class MovingAverageFixedSpanSlow(BaseFixedSpanSlow):
+class MovingAverageFixedSpanSlow(SlowFixedSpan):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         w = dyfit ** -2
         return np.dot(yfit, w) / w.sum()
 
 
-class MovingAverageFixedSpan(BaseFixedSpan):
+class MovingAverageFixedSpan(FastFixedSpan):
     slow = MovingAverageFixedSpanSlow
 
     def _prepare_calcs(self):
@@ -138,7 +134,7 @@ class MovingAverageFixedSpan(BaseFixedSpan):
         return vals
 
 
-class LinearFixedSpanSlow(BaseFixedSpanSlow):
+class LinearFixedSpanSlow(SlowFixedSpan):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         X = np.transpose(np.vstack([np.ones_like(tfit), tfit]) / dyfit)
         y = yfit / dyfit
@@ -146,7 +142,7 @@ class LinearFixedSpanSlow(BaseFixedSpanSlow):
         return theta[0] + theta[1] * t
 
 
-class LinearFixedSpan(BaseFixedSpan):
+class LinearFixedSpan(FastFixedSpan):
     slow = LinearFixedSpanSlow
 
     def _prepare_calcs(self):
