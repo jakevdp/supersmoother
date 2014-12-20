@@ -5,11 +5,6 @@ __all__ = ['MovingAverageFixedSpan', 'MovingAverageVariableSpan',
            'LinearFixedSpan', 'LinearVariableSpan']
 
 
-def _simultaneous_sort(*args):
-    isort = np.argsort(args[0])
-    return [arg[isort] for arg in args]
-
-
 class BaseSmoother(object):
     def __init__(self):
         raise NotImplementedError()
@@ -195,7 +190,8 @@ class VariableSpanMixin(object):
         return np.add.reduceat(np.append(a, 0), ranges)[::2]
 
 
-class MovingAverageVariableSpan(FastFixedSpan, VariableSpanMixin, MovingAverageMixin):
+class MovingAverageVariableSpan(FastFixedSpan, VariableSpanMixin,
+                                MovingAverageMixin):
     fixed = MovingAverageFixedSpan
 
 
