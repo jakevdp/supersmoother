@@ -1,7 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
 
-__all__ = ['FloatingMeanSmoother', 'LinearSmoother']
+__all__ = ['MovingAverageFixedSpan', 'MovingAverageVariableSpan',
+           'LinearFixedSpan', 'LinearVariableSpan']
 
 
 def _simultaneous_sort(*args):
@@ -113,14 +114,10 @@ class FastFixedSpan(BaseFixedSpan):
         self._fit_params = fit_params
 
 
-class MovingAverageFixedSpanSlow(SlowFixedSpan):
+class MovingAverageMixin(object):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         w = dyfit ** -2
         return np.dot(yfit, w) / w.sum()
-
-
-class MovingAverageFixedSpan(FastFixedSpan):
-    slow = MovingAverageFixedSpanSlow
 
     def _prepare_calcs(self):
         w = self.dy ** -2
@@ -134,16 +131,12 @@ class MovingAverageFixedSpan(FastFixedSpan):
         return vals
 
 
-class LinearFixedSpanSlow(SlowFixedSpan):
+class LinearMixin(object):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         X = np.transpose(np.vstack([np.ones_like(tfit), tfit]) / dyfit)
         y = yfit / dyfit
         theta = np.linalg.solve(np.dot(X.T, X), np.dot(X.T, y))
         return theta[0] + theta[1] * t
-
-
-class LinearFixedSpan(FastFixedSpan):
-    slow = LinearFixedSpanSlow
 
     def _prepare_calcs(self):
         w = self.dy ** -2
@@ -163,6 +156,22 @@ class LinearFixedSpan(FastFixedSpan):
         else:
             i = self._find_indices(self.t[sl], t)
             return slope[i] * t + intercept[i]
+
+
+class MovingAverageFixedSpanSlow(SlowFixedSpan, MovingAverageMixin):
+    pass
+
+
+class LinearFixedSpanSlow(SlowFixedSpan, LinearMixin):
+    pass
+
+
+class MovingAverageFixedSpan(FastFixedSpan, MovingAverageMixin):
+    slow = MovingAverageFixedSpanSlow
+
+
+class LinearFixedSpan(FastFixedSpan, LinearMixin):
+    slow = LinearFixedSpanSlow
 
 
 class VariableSpanMixin(object):
@@ -186,9 +195,9 @@ class VariableSpanMixin(object):
         return np.add.reduceat(np.append(a, 0), ranges)[::2]
 
 
-class MovingAverageVariableSpan(VariableSpanMixin, MovingAverageFixedSpan):
+class MovingAverageVariableSpan(FastFixedSpan, VariableSpanMixin, MovingAverageMixin):
     fixed = MovingAverageFixedSpan
 
 
-class LinearVariableSpan(VariableSpanMixin, LinearFixedSpan):
+class LinearVariableSpan(FastFixedSpan, VariableSpanMixin, LinearMixin):
     fixed = LinearFixedSpan
