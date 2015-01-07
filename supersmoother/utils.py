@@ -26,7 +26,6 @@ def validate_inputs(*arrays, **kwargs):
     if arrays[0].ndim != 1:
         raise ValueError("Input arrays should be one-dimensional.")
 
-    
     if sort_by is not None:
         isort = np.argsort(sort_by)
         if isort.shape != arrays[0].shape:
@@ -103,20 +102,56 @@ def windowed_sum(*arrays, **kwargs):
     return tuple(results)
 
 
-def moving_average_smooth(t, y, dy, span, cv=True):
+def moving_average_smooth(t, y, dy, span, cv=False):
+    """Perform a moving-average smooth of the data
+
+    Parameters
+    ----------
+    t, y, dy : array_like
+        time, value, and error in value of the input data
+    span : int
+        the integer span of the data
+    cv : boolean (default=False)
+        if True, treat the problem as a cross-validation, i.e. don't use
+        each point in the evaluation of its own smoothing.
+
+    Returns
+    -------
+    y_smooth : array_like
+        smoothed y values at each time t
+    """
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
     w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv)
     return yw / w
 
 
-def linear_smooth(t, y, dy, span, cv=True):
+def linear_smooth(t, y, dy, span, cv=False):
+    """Perform a moving-average smooth of the data
+
+    Parameters
+    ----------
+    t, y, dy : array_like
+        time, value, and error in value of the input data
+    span : int
+        the integer span of the data
+    cv : boolean (default=False)
+        if True, treat the problem as a cross-validation, i.e. don't use
+        each point in the evaluation of its own smoothing.
+
+    Returns
+    -------
+    y_smooth : array_like
+        smoothed y values at each time t
+    """
+    t_out = np.asarray(t)
+
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
     w, tw, yw, ttw, tyw = windowed_sum(w, t * w, y * w, t * t * w, t * y * w,
                                        span=span, subtract_mid=cv)
     denominator = (w * ttw - tw * tw)
     slope = (tyw * w - tw * yw)
-    intercept = (ttw * yw - ty * tw)
+    intercept = (ttw * yw - tyw * tw)
 
-    return (slope * t + intercept) / denominator
+    return (slope * t_out + intercept) / denominator
