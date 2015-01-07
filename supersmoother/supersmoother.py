@@ -29,7 +29,8 @@ class SuperSmoother(LinearVariableSpan):
             primary_spans = self.default_spans
         self.primary_spans = np.sort(primary_spans)
         self.middle_span = primary_spans[len(primary_spans) // 2]
-        self.primary_smooths = [LinearVariableSpan(span) for span in primary_spans]
+        self.primary_smooths = [LinearVariableSpan(span)
+                                for span in primary_spans]
         self.span = self.middle_span
 
     def _fit(self):

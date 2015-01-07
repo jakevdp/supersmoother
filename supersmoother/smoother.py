@@ -5,39 +5,116 @@ __all__ = ['MovingAverageFixedSpan', 'MovingAverageVariableSpan',
            'LinearFixedSpan', 'LinearVariableSpan']
 
 
-class BaseSmoother(object):
+class _BaseSmoother(object):
+    """Base Class for Smoothers"""
     def __init__(self):
         raise NotImplementedError()
 
     def fit(self, t, y, dy=1, presorted=False):
+        """Fit the smoother
+
+        Parameters
+        ----------
+        t : array_like
+            time locations of the points to smooth
+        y : array_like
+            y locations of the points to smooth
+        dy : array_like or float (default = 1)
+            Errors in the y values
+        presorted : bool (default = False)
+            If True, then t is assumed to be sorted.
+
+        Returns
+        -------
+        self : Smoother instance
+        """
         self.t, self.y, self.dy = self._process_inputs(t, y, dy, presorted)
         self._fit()
         return self
 
-    def _fit(self):
-        raise NotImplementedError()
-
-    def _process_inputs(self, t, y, dy, presorted=False):
-        t, y, dy = np.broadcast_arrays(t, y, dy)
-        isort = slice(None) if presorted else np.argsort(t)
-        return (a[isort] for a in (t, y, dy))
-
     def predict(self, t):
-        raise NotImplementedError()
+        """Predict the smoothed function value at time t
+        
+        Parameters
+        ----------
+        t : array_like
+            Times at which to predict the result
+
+        Returns
+        -------
+        y : ndarray
+            Smoothed values at time t
+        """
+        t = np.asarray(t)
+        return self._predict(t).reshape(t.shape)
 
     def cv_values(self, imin=0, imax=None):
-        raise NotImplementedError()
+        """Return the values of the cross-validation for the fit data
+
+        Parameters
+        ----------
+        imin, imax : integers
+            Indices of the minimum and maximum input time at which to compute
+            the cross-validation. Default is (imin, imax) = (0, None)
+        Returns
+        -------
+        vals : array
+            The cross-validation smoothed values for self.t[imin:imax]
+        """
+        return self._cv_values(imin, imax)
 
     def cv_residuals(self, imin=0, imax=None):
+        """Return the residuals of the cross-validation for the fit data
+
+        Parameters
+        ----------
+        imin, imax : integers
+            Indices of the minimum and maximum input time at which to compute
+            the cross-validation. Default is (imin, imax) = (0, None)
+        Returns
+        -------
+        resids : array
+            The cross-validation residuals for self.t[imin:imax]
+        """
         vals = self.cv_values(imin, imax)
         return (self.y[imin:imax] - vals) / self.dy[imin:imax]
 
     def cv_error(self, imin=0, imax=None):
+        """Return the sum of cross-validation residuals for the input data
+
+        Parameters
+        ----------
+        imin, imax : integers
+            Indices of the minimum and maximum input time at which to compute
+            the cross-validation. Default is (imin, imax) = (0, None)
+        Returns
+        -------
+        resid : float
+            The cross-validation residual for the fit data
+        """
         resids = self.cv_residuals(imin, imax)
         return np.mean(resids ** 2)
 
+    def _process_inputs(self, t, y, dy, presorted=False):
+        """Private function to process inputs to self.fit()"""
+        t, y, dy = np.broadcast_arrays(t, y, dy)
+        isort = slice(None) if presorted else np.argsort(t)
+        return (a[isort] for a in (t, y, dy))
 
-class BaseFixedSpan(BaseSmoother):
+    def _fit(self):
+        """Private function to perform fit() on input data"""
+        raise NotImplementedError()
+
+    def _predict(self, t):
+        """Private function implementing prediction for new data"""
+        raise NotImplementedError()
+
+    def _cv_values(self, imin=0, imax=None):
+        """Private function implementing cross-validation on fit data"""
+        raise NotImplementedError()
+
+
+class _BaseFixedSpan(_BaseSmoother):
     def __init__(self, span):
         self.span = span
 
@@ -58,13 +135,13 @@ class BaseFixedSpan(BaseSmoother):
         return max(0, imin), min(len(self.t), imax)
 
 
-class SlowFixedSpan(BaseFixedSpan):
-    def cv_values(self, imin=0, imax=None):
+class _SlowFixedSpan(_BaseFixedSpan):
+    def _cv_values(self, imin=0, imax=None):
         start, stop, step = slice(imin, imax).indices(len(self.t))
         return np.fromiter(map(self._cv_at_index, range(start, stop, step)),
                            dtype=float, count=len(self.t[imin:imax]))
 
-    def predict(self, t):
+    def _predict(self, t):
         t = np.asarray(t)
         return np.fromiter(map(self._predict_at_val, t.ravel()),
                            dtype=float, count=t.size).reshape(t.shape)
@@ -81,11 +158,11 @@ class SlowFixedSpan(BaseFixedSpan):
         return self._make_prediction(t, *args)
 
 
-class FastFixedSpan(BaseFixedSpan):
-    def cv_values(self, imin=0, imax=None):
+class _FastFixedSpan(_BaseFixedSpan):
+    def _cv_values(self, imin=0, imax=None):
         return self._predict_on('cv', sl=slice(imin, imax))
 
-    def predict(self, t):
+    def _predict(self, t):
         return self._predict_on('sum', t=t)
 
     def _fit(self, presorted=False):
@@ -109,7 +186,7 @@ class FastFixedSpan(BaseFixedSpan):
         self._fit_params = fit_params
 
 
-class MovingAverageMixin(object):
+class _MovingAverageMixin(object):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         w = dyfit ** -2
         return np.dot(yfit, w) / w.sum()
@@ -126,7 +203,7 @@ class MovingAverageMixin(object):
         return vals
 
 
-class LinearMixin(object):
+class _LinearMixin(object):
     def _make_prediction(self, t, tfit, yfit, dyfit):
         X = np.transpose(np.vstack([np.ones_like(tfit), tfit]) / dyfit)
         y = yfit / dyfit
@@ -153,23 +230,47 @@ class LinearMixin(object):
             return slope[i] * t + intercept[i]
 
 
-class MovingAverageFixedSpanSlow(SlowFixedSpan, MovingAverageMixin):
+class MovingAverageFixedSpanSlow(_SlowFixedSpan, _MovingAverageMixin):
+    """Slow version of MovingAverageFixedSpan. Primarily used for testing.
+
+    Refer to documentation of MovingAverageFixedSpan
+    """
     pass
 
 
-class LinearFixedSpanSlow(SlowFixedSpan, LinearMixin):
+class LinearFixedSpanSlow(_SlowFixedSpan, _LinearMixin):
+    """Slow version of LinearFixedSpan. Primarily used for testing.
+
+    Refer to documentation of LinearFixedSpan
+    """
     pass
 
 
-class MovingAverageFixedSpan(FastFixedSpan, MovingAverageMixin):
+class MovingAverageFixedSpan(_FastFixedSpan, _MovingAverageMixin):
+    """Fixed-span smoother based on a moving average
+
+    Parameters
+    ----------
+    span : int
+        The size of the span; i.e. the number of adjacent points to use in
+        the smoother.
+    """
     slow = MovingAverageFixedSpanSlow
 
 
-class LinearFixedSpan(FastFixedSpan, LinearMixin):
+class LinearFixedSpan(_FastFixedSpan, _LinearMixin):
+    """Fixed-span smoother based on a local linear model
+
+    Parameters
+    ----------
+    span : int
+        The size of the span; i.e. the number of adjacent points to use in
+        the smoother.
+    """
     slow = LinearFixedSpanSlow
 
 
-class VariableSpanMixin(object):
+class _VariableSpanMixin(object):
     def __init__(self, span):
         self._input_span = span
 
@@ -190,10 +291,27 @@ class VariableSpanMixin(object):
         return np.add.reduceat(np.append(a, 0), ranges)[::2]
 
 
-class MovingAverageVariableSpan(FastFixedSpan, VariableSpanMixin,
-                                MovingAverageMixin):
+class MovingAverageVariableSpan(_FastFixedSpan, _VariableSpanMixin,
+                                _MovingAverageMixin):
+    """Variable span smoother based on a moving average model.
+
+    Parameters
+    ----------
+    span : int or array of ints
+        The size of the span to use at each point. If span is an array, then
+        the size of the array must match the size of any data passed to fit().
+    """
     fixed = MovingAverageFixedSpan
 
 
-class LinearVariableSpan(FastFixedSpan, VariableSpanMixin, LinearMixin):
+class LinearVariableSpan(_FastFixedSpan, _VariableSpanMixin, _LinearMixin):
+    """Variable span smoother based on a local linear regression at each point.
+
+    Parameters
+    ----------
+    span : int or array of ints
+        The size of the span to use at each point. If span is an array, then
+        the size of the array must match the size of any data passed to fit().
+    """
     fixed = LinearFixedSpan
+    
