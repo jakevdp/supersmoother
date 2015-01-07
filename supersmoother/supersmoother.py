@@ -1,8 +1,8 @@
 import numpy as np
-from .smoother import LinearVariableSpan
+from .smoother import Smoother
 
 
-class SuperSmoother(LinearVariableSpan):
+class SuperSmoother(Smoother):
     """
     SuperSmoother, as described in [1]
 
@@ -33,10 +33,7 @@ class SuperSmoother(LinearVariableSpan):
                                 for span in primary_spans]
         self.span = self.middle_span
 
-    def _fit(self):
-        t = self.t
-        y = self.y
-        dy = self.dy
+    def _fit(self, t, y, dy):
         resids = [smoother.fit(t, y, dy,
                                sort_inputs=False).crossval_residuals()
                   for smoother in self.primary_smooths]

@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import numpy as np
 
 
@@ -102,7 +103,7 @@ def windowed_sum(*arrays, **kwargs):
     return tuple(results)
 
 
-def moving_average_smooth(t, y, dy, span, cv=False):
+def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
     """Perform a moving-average smooth of the data
 
     Parameters
@@ -111,7 +112,7 @@ def moving_average_smooth(t, y, dy, span, cv=False):
         time, value, and error in value of the input data
     span : int
         the integer span of the data
-    cv : boolean (default=False)
+    cv : boolean (default=True)
         if True, treat the problem as a cross-validation, i.e. don't use
         each point in the evaluation of its own smoothing.
 
@@ -123,11 +124,16 @@ def moving_average_smooth(t, y, dy, span, cv=False):
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
     w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv)
-    return yw / w
+
+    if t_out is None:
+        return yw / w
+    else:
+        i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
+        return yw[i] / w[i]
 
 
-def linear_smooth(t, y, dy, span, cv=False):
-    """Perform a moving-average smooth of the data
+def linear_smooth(t, y, dy, span, t_out=None, cv=True):
+    """Perform a linear smooth of the data
 
     Parameters
     ----------
@@ -135,7 +141,7 @@ def linear_smooth(t, y, dy, span, cv=False):
         time, value, and error in value of the input data
     span : int
         the integer span of the data
-    cv : boolean (default=False)
+    cv : boolean (default=True)
         if True, treat the problem as a cross-validation, i.e. don't use
         each point in the evaluation of its own smoothing.
 
@@ -144,7 +150,7 @@ def linear_smooth(t, y, dy, span, cv=False):
     y_smooth : array_like
         smoothed y values at each time t
     """
-    t_out = np.asarray(t)
+    t_input = t
 
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
@@ -154,4 +160,9 @@ def linear_smooth(t, y, dy, span, cv=False):
     slope = (tyw * w - tw * yw)
     intercept = (ttw * yw - tyw * tw)
 
-    return (slope * t_out + intercept) / denominator
+    if t_out is None:
+        return (slope * t_input + intercept) / denominator
+    else:
+        i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
+        return (slope[i] * t_out + intercept[i]) / denominator[i]
+        
