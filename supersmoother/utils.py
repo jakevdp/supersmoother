@@ -18,45 +18,76 @@ def validate_inputs(*arrays, **kwargs):
         If specified, sort all inputs by the order given in this array.
     """
     arrays = np.broadcast_arrays(*arrays)
-    for key in kwargs:
-        if key != 'sort_by':
-            raise ValueError("unrecognized argument: {0}".format(key))
+    sort_by = kwargs.pop('sort_by', None)
+
+    if kwargs:
+        raise ValueError("unrecognized arguments: {0}".format(kwargs.keys()))
 
     if arrays[0].ndim != 1:
         raise ValueError("Input arrays should be one-dimensional.")
 
     
-    if 'sort_by' in kwargs:
-        isort = np.argsort(kwargs['sort_by'])
+    if sort_by is not None:
+        isort = np.argsort(sort_by)
         if isort.shape != arrays[0].shape:
             raise ValueError("sort shape must equal array shape.")
         arrays = tuple([a[isort] for a in arrays])
     return arrays
 
 
-def windowed_sum(span, *arrays):
+def windowed_sum(*arrays, **kwargs):
     """Compute the windowed sum of the given arrays
 
     Parameters
     ----------
-    span : int or array of ints
-        The span to use for the sum at each point
     *args : array_like
         Each additional argument is an array that will be windowed
+    span : int or array of ints
+        The span to use for the sum at each point
+    subtract_mid : boolean
+        If true, then subtract the middle value from each sum
+    slow : boolean
+        If true, use a slow method to compute the result. This is
+        primarily useful for testing and validation.
     
     Returns
     -------
     arrays : tuple of ndarrays
         arrays containing the windowed sum of each input array
     """
-    span = np.asarray(span, dtype=int)
+    span = kwargs.pop('span', None)
+    subtract_mid = kwargs.pop('subtract_mid', False)
+    slow = kwargs.pop('slow', False)
 
-    if span.ndim == 0:
-        # Fixed-span
+    if kwargs:
+        raise ValueError("Unrecognized keywords: {0}".format(kwargs.keys()))
+
+    if span is None:
+        raise ValueError("Must provide a positive integer span")
+
+    span = np.asarray(span, dtype=int)
+    if not np.all(span > 0):
+        raise ValueError("span values must be positive")
+
+    if slow:
+        # Slow fixed/variable span
+        results = []
+        for array in map(np.asarray, arrays):
+            assert array.ndim == 1
+            span, array = np.broadcast_arrays(span, array)
+            result = (array[max(0, i - s // 2): i - s // 2 + s].sum()
+                      for i, s, in enumerate(span))
+            results.append(np.fromiter(result,
+                                       dtype=array.dtype,
+                                       count=len(array)))
+
+    elif span.ndim == 0:
+        # Fast fixed-span
         window = np.ones(span)
         results = [np.convolve(a, window, mode='same') for a in arrays]
+
     else:
-        # Variable-span
+        # Fast variable-span
         window = np.asarray(span)
         mins = np.arange(len(window)) - window // 2
         results = []
@@ -66,51 +97,24 @@ def windowed_sum(span, *arrays):
                                 np.minimum(len(a), mins + window)]).ravel('F')
             results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
 
+    if subtract_mid:
+        results = (r - a for r, a in zip(results, arrays))
+
     return tuple(results)
-
-
-def windowed_sum_slow(span, *arrays):
-    """Slow version of the windowed sum of the given arrays
-
-    This function is used mainly for testing; call signature and return
-    value matches that of the windowed_sum() function.
-    """
-    results = []
-    span = np.asarray(span, dtype=int)
-
-    for array in map(np.asarray, arrays):
-        span, array = np.broadcast_arrays(span, array)
-        assert array.ndim == 1
-
-        results.append(np.fromiter((array[max(0, i - s // 2):
-                                          i - s // 2 + s].sum()
-                                    for i, s, in enumerate(span)),
-                                   dtype=array.dtype,
-                                   count=len(array)))
-    return tuple(results)
-
-
-def build_windowed_arrays(arrays, span, cv=True):
-    windowed_arrays = windowed_sum(span, *arrays)
-    if cv:
-        windowed_arrays = [(asum - a) for (asum, a)
-                           in zip(windowed_arrays, arrays)]
-    return windowed_arrays
 
 
 def moving_average_smooth(t, y, dy, span, cv=True):
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
-    w, yw = build_windowed_arrays((w, y * w), span, cv)
+    w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv)
     return yw / w
 
 
 def linear_smooth(t, y, dy, span, cv=True):
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     w = dy ** -2
-    w, tw, yw, ttw, tyw = build_windowed_arrays((w, t * w, y * w,
-                                                 t * t * w, t * y * w),
-                                                span, cv)
+    w, tw, yw, ttw, tyw = windowed_sum(w, t * w, y * w, t * t * w, t * y * w,
+                                       span=span, subtract_mid=cv)
     denominator = (w * ttw - tw * tw)
     slope = (tyw * w - tw * yw)
     intercept = (ttw * yw - ty * tw)
