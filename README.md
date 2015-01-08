@@ -16,6 +16,10 @@ To install the bleeding-edge source, download the source code from http://github
 $ python setup.py install
 ```
 
+Example
+-------
+You can see an example of the code in action [on nbviewer](http://nbviewer.ipython.org/github/jakevdp/supersmoother/blob/master/examples/Supersmoother.ipynb)
+
 Testing
 -------
 This code has full unit tests implemented in [nose](https://nose.readthedocs.org/en/latest/). With ``nose`` installed, you can run the test suite using
