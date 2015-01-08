@@ -45,11 +45,8 @@ def test_variable_sine_crossval():
             yield check_model, Model, span
 
 
-def test_func_span_linear():
+def test_func_span():
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
-
-    span = 0.1
-    spanfunc = lambda t: 0.1 * np.ones_like(t)
 
     def check_model(Model, span, spanfunc):
         model1 = Model(span)

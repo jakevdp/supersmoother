@@ -3,8 +3,7 @@ import numpy as np
 from .utils import (linear_smooth, moving_average_smooth,
                     linear_smooth_varspan, moving_average_smooth_varspan)
 
-__all__ = ['MovingAverageSmoother', 'LinearSmoother',
-           'FunctionSpanLinearSmoother']
+__all__ = ['MovingAverageSmoother', 'LinearSmoother']
 
 
 class Smoother(object):
