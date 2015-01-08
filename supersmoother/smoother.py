@@ -57,7 +57,7 @@ class Smoother(object):
     def cv_residuals(self, cv=True):
         """Return the residuals of the cross-validation for the fit data"""
         vals = self.cv_values(cv)
-        return (self.y- vals) / self.dy
+        return (self.y - vals) / self.dy
 
     def cv_error(self, cv=True, skip_endpoints=True):
         """Return the sum of cross-validation residuals for the input data"""
