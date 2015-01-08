@@ -1,8 +1,9 @@
 from __future__ import division, print_function
 import numpy as np
-from .utils import linear_smooth, moving_average_smooth
+from .utils import linear_smooth, moving_average_smooth, linear_smooth_varspan
 
-__all__ = ['MovingAverageSmoother', 'LocalLinearSmoother']
+__all__ = ['MovingAverageSmoother', 'LocalLinearSmoother',
+           'FunctionSpanLinearSmoother']
 
 
 class Smoother(object):
@@ -57,9 +58,11 @@ class Smoother(object):
         vals = self.cv_values(cv)
         return (self.y- vals) / self.dy
 
-    def cv_error(self, cv=True):
+    def cv_error(self, cv=True, skip_endpoints=True):
         """Return the sum of cross-validation residuals for the input data"""
         resids = self.cv_residuals(cv)
+        if skip_endpoints:
+            resids = resids[1:-1]
         return np.mean(resids ** 2)
 
     def _validate_inputs(self, t, y, dy, presorted=False):
@@ -117,7 +120,7 @@ class LocalLinearSmoother(Smoother):
         self.span = span
 
     def _fit(self, t, y, dy):
-        self.span_int = self.span * len(t)
+        self.span_int = (self.span * len(t)).astype(int)
 
     def _predict(self, t):
         return linear_smooth(self.t, self.y, self.dy,
@@ -126,3 +129,17 @@ class LocalLinearSmoother(Smoother):
     def _cv_values(self, cv=True):
         return linear_smooth(self.t, self.y, self.dy,
                              self.span_int, cv=cv)
+
+
+class FunctionSpanLinearSmoother(LocalLinearSmoother):
+    """TODO: document this"""
+    def __init__(self, spanfunc):
+        self.spanfunc = spanfunc
+
+    def _fit(self, t, y, dy):
+        self.span_int = len(t) * self.spanfunc(t)
+
+    def _predict(self, t):
+        span_int = len(self.t) * self.spanfunc(t)
+        return linear_smooth_varspan(self.t, self.y, self.dy,
+                                     span=span_int, t_out=t)

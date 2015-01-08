@@ -103,6 +103,44 @@ def windowed_sum(*arrays, **kwargs):
     return tuple(results)
 
 
+def windowed_sum_varspan(*arrays, **kwargs):
+    """TODO: document this
+    TODO: combine with windowed_sum??
+    """
+    span = kwargs.pop('span', None)
+    indices = kwargs.pop('indices', None)
+    slow = kwargs.pop('slow', False)
+
+    if kwargs:
+        raise ValueError("Unrecognized keywords: {0}".format(kwargs.keys()))
+
+    if span is None:
+        raise ValueError("Must provide a positive spans")
+
+    if indices is None:
+        raise ValueError("Must provide an array of indices")
+
+    span = np.asarray(span, dtype=int)
+    if not np.all(span > 0):
+        raise ValueError("span values must be positive")
+
+    span, indices = np.broadcast_arrays(span, indices)
+
+    if slow:
+        raise ValueError("slow version not implemented")
+    else:
+        window = np.asarray(span)
+        mins = indices - window // 2
+
+        results = []
+        for a in map(np.asarray, arrays):
+            ranges = np.vstack([np.maximum(0, mins),
+                                np.minimum(len(a), mins + window)]).ravel('F')
+            results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
+
+    return results
+
+
 def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
     """Perform a moving-average smooth of the data
 
@@ -166,3 +204,22 @@ def linear_smooth(t, y, dy, span, t_out=None, cv=True):
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return (slope[i] * t_out + intercept[i]) / denominator[i]
         
+
+def linear_smooth_varspan(t, y, dy, span, t_out):
+    """
+    TODO: doc
+    TODO: combine with standard linear smooth?
+    span matches t_out
+    """
+    t, y, dy = validate_inputs(t, y, dy, sort_by=t)
+    indices = np.searchsorted(t, t_out)
+    
+    w = dy ** -2
+    w, tw, yw, ttw, tyw = windowed_sum_varspan(w, t * w, y * w,
+                                               t * t * w, t * y * w,
+                                               span=span, indices=indices)
+    denominator = (w * ttw - tw * tw)
+    slope = (tyw * w - tw * yw)
+    intercept = (ttw * yw - tyw * tw)
+
+    return (slope * t_out + intercept) / denominator
