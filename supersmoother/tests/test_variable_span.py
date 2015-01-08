@@ -45,7 +45,7 @@ def test_variable_sine_crossval():
             yield check_model, Model, span
 
 
-def test_func_span():
+def test_func_span_const():
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
     def check_model(Model, span, spanfunc):
@@ -58,3 +58,19 @@ def test_func_span():
         for span in [0.05, 0.2, 0.5]:
             spanfunc = lambda t, span=span: span * np.ones_like(t)
             yield check_model, Model, span, spanfunc
+
+
+def test_func_span_variable():
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+
+    spanfunc = lambda t, tmax=t.max(): 0.5 + 0.05 * t / tmax
+    span = spanfunc(t)
+
+    def check_model(Model, span, spanfunc):
+        model1 = Model(span)
+        model2 = Model(spanfunc)
+        assert_allclose(model1.fit(t, y, dy).predict(t),
+                        model2.fit(t, y, dy).predict(t))
+
+    for Model in [MovingAverageSmoother, LinearSmoother]:
+        yield check_model, Model, span, spanfunc

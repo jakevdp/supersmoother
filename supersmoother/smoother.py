@@ -1,7 +1,8 @@
 from __future__ import division, print_function
 import numpy as np
 from .utils import (linear_smooth, moving_average_smooth,
-                    linear_smooth_varspan, moving_average_smooth_varspan)
+                    linear_smooth_varspan, moving_average_smooth_varspan,
+                    iterable)
 
 __all__ = ['MovingAverageSmoother', 'LinearSmoother']
 
@@ -67,9 +68,11 @@ class Smoother(object):
 
     def _validate_inputs(self, t, y, dy, presorted=False):
         t, y, dy = np.broadcast_arrays(t, y, dy)
-        if not presorted:
-            isort = np.argsort(t)
-            t, y, dy = t[isort], y[isort], dy[isort]
+        if presorted:
+            self.isort = slice(None)
+        else:
+            self.isort = np.argsort(t)
+            t, y, dy = t[self.isort], y[self.isort], dy[self.isort]
         return t, y, dy
 
     def _fit(self):
@@ -85,7 +88,26 @@ class Smoother(object):
         raise NotImplementedError()
 
 
-class MovingAverageSmoother(Smoother):
+class SpannedSmoother(Smoother):
+    """Base class for smoothers based on local spans of sorted data"""
+    def __init__(self, span):
+        self.span = span
+
+    def _fit(self, t, y, dy):
+        pass
+
+    def span_int(self, t=None):
+        if t is None:
+            t = self.t
+        if callable(self.span):
+            return self.span(t) * len(self.t)
+        elif iterable(self.span):
+            return self.span[self.isort] * len(self.t)
+        else:
+            return self.span * len(self.t)
+
+
+class MovingAverageSmoother(SpannedSmoother):
     """Local smoother based on a moving average of adjacent points
 
     Parameters
@@ -93,30 +115,21 @@ class MovingAverageSmoother(Smoother):
     span : float or array
         The fraction of the data to use at each point of the smooth
     """
-    def __init__(self, span):
-        self.span = span
-
-    def _fit(self, t, y, dy):
-        if callable(self.span):
-            self.span_int = self.span(t) * len(t)
-        else:
-            self.span_int = self.span * len(t)
-
     def _predict(self, t):
         if callable(self.span):
-            span_int = self.span(t) * len(self.t)
+            span_int = self.span_int(t)
             return moving_average_smooth_varspan(self.t, self.y, self.dy,
                                                  span=span_int, t_out=t)
         else:
             return moving_average_smooth(self.t, self.y, self.dy,
-                                         self.span_int, cv=False, t_out=t)
+                                         self.span_int(), cv=False, t_out=t)
 
     def _cv_values(self, cv=True):
         return moving_average_smooth(self.t, self.y, self.dy,
-                                     self.span_int, cv=cv)
+                                     self.span_int(), cv=cv)
 
 
-class LinearSmoother(Smoother):
+class LinearSmoother(SpannedSmoother):
     """Local smoother based on a locally linear fit of adjacent points
 
     Parameters
@@ -126,24 +139,15 @@ class LinearSmoother(Smoother):
         If a function is passed, then this will be evaluated at each input
         time to determine the smooth.
     """
-    def __init__(self, span):
-        self.span = span
-
-    def _fit(self, t, y, dy):
-        if callable(self.span):
-            self.span_int = self.span(t) * len(t)
-        else:
-            self.span_int = self.span * len(t)
-
     def _predict(self, t):
         if callable(self.span):
-            span_int = self.span(t) * len(self.t)
+            span_int = self.span_int(t)
             return linear_smooth_varspan(self.t, self.y, self.dy,
                                          span=span_int, t_out=t)
         else:
             return linear_smooth(self.t, self.y, self.dy,
-                                 self.span_int, cv=False, t_out=t)
+                                 self.span_int(), cv=False, t_out=t)
 
     def _cv_values(self, cv=True):
         return linear_smooth(self.t, self.y, self.dy,
-                             self.span_int, cv=cv)
+                             self.span_int(), cv=cv)

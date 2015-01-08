@@ -1,7 +1,14 @@
 from .. import utils
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_
+
+
+def test_iterable():
+    x = [1, 2, 3]
+    y = 1
+    assert_(utils.iterable(x))
+    assert_(not utils.iterable(y))
 
 
 def test_validate_inputs_nosort(N=10, rseed=0):

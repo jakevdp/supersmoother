@@ -2,6 +2,16 @@ from __future__ import division, print_function
 import numpy as np
 
 
+def iterable(obj):
+    """Utility to check if object is iterable"""
+    try:
+        iter(obj)
+    except:
+        return False
+    else:
+        return True
+
+
 def validate_inputs(*arrays, **kwargs):
     """Validate input arrays
 

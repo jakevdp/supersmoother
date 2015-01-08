@@ -55,5 +55,9 @@ class SuperSmoother(LinearSmoother):
                           .cv_values(cv=False))
 
         # 5. Use these smoothed span estimates at each point
-        self.span = smoothed_spans
+        self.span = smoothed_spans[np.argsort(self.isort)]
+
+        # Note: we should use this, but it's much less efficient
+        #self.span = self.mid_smoother.predict
+
         LinearSmoother._fit(self, t, y, dy)
