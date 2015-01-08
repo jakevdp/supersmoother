@@ -1,0 +1,6 @@
+include *.md
+include *.py
+include *.cfg
+recursive-include examples *.py *.ipynb
+recursive-include supersmoother *.py
+include LICENSE
