@@ -57,7 +57,7 @@ class SuperSmoother(LinearSmoother):
 
         # 5. Use these smoothed span estimates at each point
         self.span = self.smoothed_spans.predict
-        
+
         # keep these around for efficiencey of evaluating the cv
         self.smoothed_span_vals = smoothed_spans
         LinearSmoother._fit(self, t, y, dy)

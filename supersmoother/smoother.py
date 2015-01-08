@@ -36,7 +36,7 @@ class Smoother(object):
 
     def predict(self, t):
         """Predict the smoothed function value at time t
-        
+
         Parameters
         ----------
         t : array_like

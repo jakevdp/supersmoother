@@ -18,7 +18,7 @@ def validate_inputs(*arrays, **kwargs):
     This checks that
     - Arrays are mutually broadcastable
     - Broadcasted arrays are one-dimensional
-    
+
     Optionally, arrays are sorted according to the ``sort_by`` argument.
 
     Parameters
@@ -59,7 +59,7 @@ def windowed_sum(*arrays, **kwargs):
     slow : boolean
         If true, use a slow method to compute the result. This is
         primarily useful for testing and validation.
-    
+
     Returns
     -------
     arrays : tuple of ndarrays
@@ -177,7 +177,7 @@ def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return yw[i] / w[i]
-        
+
 
 def moving_average_smooth_varspan(t, y, dy, span, t_out):
     """
@@ -187,7 +187,7 @@ def moving_average_smooth_varspan(t, y, dy, span, t_out):
     """
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     indices = np.searchsorted(t, t_out)
-    
+
     w = dy ** -2
     w, yw = windowed_sum_varspan(w, y * w, span=span, indices=indices)
 
@@ -227,7 +227,7 @@ def linear_smooth(t, y, dy, span, t_out=None, cv=True):
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return (slope[i] * t_out + intercept[i]) / denominator[i]
-        
+
 
 def linear_smooth_varspan(t, y, dy, span, t_out):
     """
@@ -237,7 +237,7 @@ def linear_smooth_varspan(t, y, dy, span, t_out):
     """
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
     indices = np.searchsorted(t, t_out)
-    
+
     w = dy ** -2
     w, tw, yw, ttw, tyw = windowed_sum_varspan(w, t * w, y * w,
                                                t * t * w, t * y * w,
