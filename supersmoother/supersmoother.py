@@ -1,8 +1,8 @@
 import numpy as np
-from .smoother import Smoother
+from .smoother import LocalLinearSmoother
 
 
-class SuperSmoother(Smoother):
+class SuperSmoother(LocalLinearSmoother):
     """
     SuperSmoother, as described in [1]
 
@@ -28,25 +28,32 @@ class SuperSmoother(Smoother):
         if primary_spans is None:
             primary_spans = self.default_spans
         self.primary_spans = np.sort(primary_spans)
-        self.middle_span = primary_spans[len(primary_spans) // 2]
-        self.primary_smooths = [LinearVariableSpan(span)
+        self.middle_span = self.primary_spans[len(primary_spans) // 2]
+        self.primary_smooths = [LocalLinearSmoother(span)
                                 for span in primary_spans]
-        self.span = self.middle_span
+        self.middle_smooth = self.primary_smooths[len(primary_spans) // 2]
 
     def _fit(self, t, y, dy):
-        resids = [smoother.fit(t, y, dy,
-                               sort_inputs=False).crossval_residuals()
+        # 1. Get residuals for each of the primary smooths
+        [smoother.fit(t, y, dy, presorted=True)
+         for smoother in self.primary_smooths]
+        resids = [smoother.cv_residuals()
                   for smoother in self.primary_smooths]
-        smoothed_resids = np.array([LinearVariableSpan(self.middle_span)
-                                    .fit(t, abs(resid), 1, sort_inputs=False)
-                                    .predict(t) for resid in resids])
-        best_spans = self.primary_spans[np.argmin(smoothed_resids, 0)]
-        smoothed_spans = LinearVariableSpan(self.middle_span)\
-            .fit(t, best_spans, 1, sort_inputs=False).predict(t)
 
-        self.resids = resids
-        self.smoothed_resids = smoothed_resids
-        self.best_spans = best_spans
+        # 2. Smooth each set of residuals with the midrange
+        smoothed_resids = np.array([self.middle_smooth
+                                    .fit(t, abs(resid), 1, False)
+                                    .cv_values(False)
+                                    for resid in resids])
+
+        # 3. Select span yielding best residual at each point
+        best_spans = self.primary_spans[np.argmin(smoothed_resids, 0)]
+
+        # 4. Smooth best span estimates with midrange span
+        smoothed_spans = (self.middle_smooth
+                          .fit(t, best_spans, 1, False)
+                          .cv_values(False))
+
+        # 5. Use these smoothed span estimates at each point
         self.span = smoothed_spans
-        self._set_span(smoothed_spans, sort=False)
-        LinearVariableSpan._fit(self)            
+        LocalLinearSmoother._fit(self, t, y, dy)

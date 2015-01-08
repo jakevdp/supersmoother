@@ -48,18 +48,18 @@ class Smoother(object):
         t = np.asarray(t)
         return self._predict(np.ravel(t)).reshape(t.shape)
 
-    def cv_values(self):
+    def cv_values(self, cv=True):
         """Return the values of the cross-validation for the fit data"""
-        return self._cv_values()
+        return self._cv_values(cv)
 
-    def cv_residuals(self):
+    def cv_residuals(self, cv=True):
         """Return the residuals of the cross-validation for the fit data"""
-        vals = self.cv_values()
+        vals = self.cv_values(cv)
         return (self.y- vals) / self.dy
 
-    def cv_error(self):
+    def cv_error(self, cv=True):
         """Return the sum of cross-validation residuals for the input data"""
-        resids = self.cv_residuals(imin, imax)
+        resids = self.cv_residuals(cv)
         return np.mean(resids ** 2)
 
     def _validate_inputs(self, t, y, dy, presorted=False):
@@ -77,7 +77,7 @@ class Smoother(object):
         """Private function implementing prediction for new data"""
         raise NotImplementedError()
 
-    def _cv_values(self):
+    def _cv_values(self, cv=True):
         """Private function implementing cross-validation on fit data"""
         raise NotImplementedError()
 
@@ -100,9 +100,9 @@ class MovingAverageSmoother(Smoother):
         return moving_average_smooth(self.t, self.y, self.dy,
                                       self.span_int, cv=False, t_out=t)
 
-    def _cv_values(self):
+    def _cv_values(self, cv=True):
         return moving_average_smooth(self.t, self.y, self.dy,
-                                     self.span_int, cv=True)
+                                     self.span_int, cv=cv)
 
 
 class LocalLinearSmoother(Smoother):
@@ -123,6 +123,6 @@ class LocalLinearSmoother(Smoother):
         return linear_smooth(self.t, self.y, self.dy,
                              self.span_int, cv=False, t_out=t)
 
-    def _cv_values(self):
+    def _cv_values(self, cv=True):
         return linear_smooth(self.t, self.y, self.dy,
-                             self.span_int, cv=True)
+                             self.span_int, cv=cv)
