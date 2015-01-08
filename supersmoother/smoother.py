@@ -99,13 +99,15 @@ class SpannedSmoother(Smoother):
     def span_int(self, t=None):
         if t is None:
             t = self.t
+
         if callable(self.span):
-            return np.clip(self.span(t) * len(self.t),
-                           3, len(t))
+            spanint = self.span(t) * len(self.t)
         elif iterable(self.span):
-            return self.span[self.isort] * len(self.t)
+            spanint = self.span[self.isort] * len(self.t)
         else:
-            return self.span * len(self.t)
+            spanint = self.span * len(self.t)
+
+        return np.clip(spanint, 3, None)
 
 
 class MovingAverageSmoother(SpannedSmoother):
@@ -118,9 +120,9 @@ class MovingAverageSmoother(SpannedSmoother):
     """
     def _predict(self, t):
         if callable(self.span):
-            span_int = self.span_int(t)
             return moving_average_smooth_varspan(self.t, self.y, self.dy,
-                                                 span=span_int, t_out=t)
+                                                 span=self.span_int(t),
+                                                 t_out=t)
         else:
             return moving_average_smooth(self.t, self.y, self.dy,
                                          self.span_int(), cv=False, t_out=t)
@@ -142,9 +144,8 @@ class LinearSmoother(SpannedSmoother):
     """
     def _predict(self, t):
         if callable(self.span):
-            span_int = self.span_int(t)
             return linear_smooth_varspan(self.t, self.y, self.dy,
-                                         span=span_int, t_out=t)
+                                         span=self.span_int(t), t_out=t)
         else:
             return linear_smooth(self.t, self.y, self.dy,
                                  self.span_int(), cv=False, t_out=t)
