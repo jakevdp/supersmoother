@@ -100,7 +100,8 @@ class SpannedSmoother(Smoother):
         if t is None:
             t = self.t
         if callable(self.span):
-            return self.span(t) * len(self.t)
+            return np.clip(self.span(t) * len(self.t),
+                           3, len(t))
         elif iterable(self.span):
             return self.span[self.isort] * len(self.t)
         else:

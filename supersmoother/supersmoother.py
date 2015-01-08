@@ -32,7 +32,7 @@ class SuperSmoother(LinearSmoother):
         self.middle_span = self.primary_spans[len(primary_spans) // 2]
         self.primary_smooths = [LinearSmoother(span)
                                 for span in primary_spans]
-        self.mid_smoother = self.primary_smooths[len(primary_spans) // 2]
+        self.smoothed_spans = LinearSmoother(self.middle_span)
 
     def _fit(self, t, y, dy):
         # 1. Get residuals for each of the primary smooths
@@ -42,7 +42,7 @@ class SuperSmoother(LinearSmoother):
                   for smoother in self.primary_smooths]
 
         # 2. Smooth each set of residuals with the midrange
-        smoothed_resids = np.array([self.mid_smoother
+        smoothed_resids = np.array([self.smoothed_spans
                                     .fit(t, abs(resid), 1, False)
                                     .cv_values(cv=False)
                                     for resid in resids])
@@ -51,17 +51,17 @@ class SuperSmoother(LinearSmoother):
         best_spans = self.primary_spans[np.argmin(smoothed_resids, 0)]
 
         # 4. Smooth best span estimates with midrange span
-        smoothed_spans = (self.mid_smoother
+        smoothed_spans = (self.smoothed_spans
                           .fit(t, best_spans, 1, False)
                           .cv_values(cv=False))
 
         # 5. Use these smoothed span estimates at each point
-        self.span = self.mid_smoother.predict
+        self.span = self.smoothed_spans.predict
         
         # keep these around for efficiencey of evaluating the cv
-        self.cv_spans_int = smoothed_spans * len(self.t)
+        self.smoothed_span_vals = smoothed_spans
         LinearSmoother._fit(self, t, y, dy)
 
     def _cv_values(self, cv=True):
         return linear_smooth(self.t, self.y, self.dy,
-                             self.cv_spans_int, cv=cv)
+                             self.smoothed_span_vals * len(self.t), cv=cv)

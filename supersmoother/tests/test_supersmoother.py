@@ -41,7 +41,7 @@ def test_sine_cv():
 
 
 def test_line_linear():
-    t, y, dy = make_linear(err=1E-6)
+    t, y, dy = make_linear(err=1E-6, rseed=0)
     tfit = np.linspace(0, 10, 40)
 
     model = SuperSmoother().fit(t, y, dy)
