@@ -92,7 +92,6 @@ def windowed_sum(*arrays, **kwargs):
         mins = np.arange(len(window)) - window // 2
         results = []
         for a in map(np.asarray, arrays):
-            assert a.shape == window.shape
             ranges = np.vstack([np.maximum(0, mins),
                                 np.minimum(len(a), mins + window)]).ravel('F')
             results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
@@ -168,6 +167,21 @@ def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return yw[i] / w[i]
+        
+
+def moving_average_smooth_varspan(t, y, dy, span, t_out):
+    """
+    TODO: doc
+    TODO: combine with standard linear smooth?
+    span matches t_out
+    """
+    t, y, dy = validate_inputs(t, y, dy, sort_by=t)
+    indices = np.searchsorted(t, t_out)
+    
+    w = dy ** -2
+    w, yw = windowed_sum_varspan(w, y * w, span=span, indices=indices)
+
+    return yw / w
 
 
 def linear_smooth(t, y, dy, span, t_out=None, cv=True):

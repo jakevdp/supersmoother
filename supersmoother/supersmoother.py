@@ -1,8 +1,8 @@
 import numpy as np
-from .smoother import LocalLinearSmoother
+from .smoother import LinearSmoother
 
 
-class SuperSmoother(LocalLinearSmoother):
+class SuperSmoother(LinearSmoother):
     """
     SuperSmoother, as described in [1]
 
@@ -29,7 +29,7 @@ class SuperSmoother(LocalLinearSmoother):
             primary_spans = self.default_spans
         self.primary_spans = np.sort(primary_spans)
         self.middle_span = self.primary_spans[len(primary_spans) // 2]
-        self.primary_smooths = [LocalLinearSmoother(span)
+        self.primary_smooths = [LinearSmoother(span)
                                 for span in primary_spans]
         self.mid_smoother = self.primary_smooths[len(primary_spans) // 2]
 
@@ -56,4 +56,4 @@ class SuperSmoother(LocalLinearSmoother):
 
         # 5. Use these smoothed span estimates at each point
         self.span = smoothed_spans
-        LocalLinearSmoother._fit(self, t, y, dy)
+        LinearSmoother._fit(self, t, y, dy)

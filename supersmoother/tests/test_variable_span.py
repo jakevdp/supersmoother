@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less, assert_equal
 
-from .. import MovingAverageSmoother, LocalLinearSmoother
+from .. import MovingAverageSmoother, LinearSmoother
 
 
 def make_sine(N=100, err=0.05, rseed=None):
@@ -23,7 +23,7 @@ def test_variable_sine_predict():
         assert_allclose(model1.fit(t, y, dy).predict(tfit),
                         model2.fit(t, y, dy).predict(tfit))
 
-    for Model in [MovingAverageSmoother, LocalLinearSmoother]:
+    for Model in [MovingAverageSmoother, LinearSmoother]:
         for span in [0.05, 0.2, 0.5]:
             yield check_model, Model, span
 
@@ -40,6 +40,24 @@ def test_variable_sine_crossval():
         assert_allclose(model1.fit(t, y, dy).cv_values(),
                         model2.fit(t, y, dy).cv_values())
 
-    for Model in [MovingAverageSmoother, LocalLinearSmoother]:
+    for Model in [MovingAverageSmoother, LinearSmoother]:
         for span in [0.05, 0.2, 0.5]:
             yield check_model, Model, span
+
+
+def test_func_span_linear():
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+
+    span = 0.1
+    spanfunc = lambda t: 0.1 * np.ones_like(t)
+
+    def check_model(Model, span, spanfunc):
+        model1 = Model(span)
+        model2 = Model(spanfunc)
+        assert_allclose(model1.fit(t, y, dy).predict(t),
+                        model2.fit(t, y, dy).predict(t))
+
+    for Model in [MovingAverageSmoother, LinearSmoother]:
+        for span in [0.05, 0.2, 0.5]:
+            spanfunc = lambda t, span=span: span * np.ones_like(t)
+            yield check_model, Model, span, spanfunc

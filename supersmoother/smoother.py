@@ -1,8 +1,9 @@
 from __future__ import division, print_function
 import numpy as np
-from .utils import linear_smooth, moving_average_smooth, linear_smooth_varspan
+from .utils import (linear_smooth, moving_average_smooth,
+                    linear_smooth_varspan, moving_average_smooth_varspan)
 
-__all__ = ['MovingAverageSmoother', 'LocalLinearSmoother',
+__all__ = ['MovingAverageSmoother', 'LinearSmoother',
            'FunctionSpanLinearSmoother']
 
 
@@ -97,49 +98,53 @@ class MovingAverageSmoother(Smoother):
         self.span = span
 
     def _fit(self, t, y, dy):
-        self.span_int = self.span * len(t)
+        if callable(self.span):
+            self.span_int = self.span(t) * len(t)
+        else:
+            self.span_int = self.span * len(t)
 
     def _predict(self, t):
-        return moving_average_smooth(self.t, self.y, self.dy,
-                                      self.span_int, cv=False, t_out=t)
+        if callable(self.span):
+            span_int = self.span(t) * len(self.t)
+            return moving_average_smooth_varspan(self.t, self.y, self.dy,
+                                                 span=span_int, t_out=t)
+        else:
+            return moving_average_smooth(self.t, self.y, self.dy,
+                                         self.span_int, cv=False, t_out=t)
 
     def _cv_values(self, cv=True):
         return moving_average_smooth(self.t, self.y, self.dy,
                                      self.span_int, cv=cv)
 
 
-class LocalLinearSmoother(Smoother):
+class LinearSmoother(Smoother):
     """Local smoother based on a locally linear fit of adjacent points
 
     Parameters
     ----------
-    span : float or array
-        The fraction of the data to use at each point of the smooth
+    span : float, array, or function
+        The fraction of the data to use at each point of the smooth.
+        If a function is passed, then this will be evaluated at each input
+        time to determine the smooth.
     """
     def __init__(self, span):
         self.span = span
 
     def _fit(self, t, y, dy):
-        self.span_int = (self.span * len(t)).astype(int)
+        if callable(self.span):
+            self.span_int = self.span(t) * len(t)
+        else:
+            self.span_int = self.span * len(t)
 
     def _predict(self, t):
-        return linear_smooth(self.t, self.y, self.dy,
-                             self.span_int, cv=False, t_out=t)
+        if callable(self.span):
+            span_int = self.span(t) * len(self.t)
+            return linear_smooth_varspan(self.t, self.y, self.dy,
+                                         span=span_int, t_out=t)
+        else:
+            return linear_smooth(self.t, self.y, self.dy,
+                                 self.span_int, cv=False, t_out=t)
 
     def _cv_values(self, cv=True):
         return linear_smooth(self.t, self.y, self.dy,
                              self.span_int, cv=cv)
-
-
-class FunctionSpanLinearSmoother(LocalLinearSmoother):
-    """TODO: document this"""
-    def __init__(self, spanfunc):
-        self.spanfunc = spanfunc
-
-    def _fit(self, t, y, dy):
-        self.span_int = len(t) * self.spanfunc(t)
-
-    def _predict(self, t):
-        span_int = len(self.t) * self.spanfunc(t)
-        return linear_smooth_varspan(self.t, self.y, self.dy,
-                                     span=span_int, t_out=t)
