@@ -63,5 +63,6 @@ class SuperSmoother(LinearSmoother):
         LinearSmoother._fit(self, t, y, dy)
 
     def _cv_values(self, cv=True):
+        spans = np.clip(self.smoothed_span_vals * len(self.t), 3, None)
         return linear_smooth(self.t, self.y, self.dy,
-                             self.smoothed_span_vals * len(self.t), cv=cv)
+                             spans, cv=cv)
