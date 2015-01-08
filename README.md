@@ -7,7 +7,11 @@ for fast numerical computation.
 
 Installation
 ------------
-Installation is simple: download the source code and type
+Installation is simple: To install the released version, type
+```
+$ pip install supersmoother
+```
+To install the bleeding-edge source, download the source code from http://github.com/jakevdp/supersmoother and type:
 ```
 $ python setup.py install
 ```
