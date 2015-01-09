@@ -1,5 +1,32 @@
 from __future__ import division, print_function
+
+from contextlib import contextmanager
+
 import numpy as np
+
+
+@contextmanager
+def setattr_context(obj, **kwargs):
+    """
+    Context manager to temporarily change the values of object attributes
+    while executing a function.
+
+    Example
+    -------
+    >>> class Foo: pass
+    >>> f = Foo(); f.attr = 'hello'
+    >>> with setattr_context(f, attr='goodbye'):
+    ...     print(f.attr)
+    goodbye
+    >>> print(f.attr)
+    hello
+    """
+    old_kwargs = dict([(key, getattr(obj, key)) for key in kwargs])
+    [setattr(obj, key, val) for key, val in kwargs.items()]
+    try:
+        yield
+    finally:
+        [setattr(obj, key, val) for key, val in old_kwargs.items()]
 
 
 def iterable(obj):
@@ -247,3 +274,17 @@ def linear_smooth_varspan(t, y, dy, span, t_out):
     intercept = (ttw * yw - tyw * tw)
 
     return (slope * t_out + intercept) / denominator
+
+
+def multinterp(x, y, xquery, slow=False):
+    """
+    TODO: document this
+    """
+    x, y, xquery = map(np.asarray, (x, y, xquery))
+    assert y.shape == x.shape + xquery.shape
+
+    if slow:
+        from scipy.interpolate import interp1d
+        return np.array([interp1d(x, y)(xq) for xq, y in zip(xquery, y.T)])
+    else:
+        raise NotImplementedError("not slow")
