@@ -1,7 +1,6 @@
 from __future__ import division, print_function
 
 import numpy as np
-from scipy.interpolate import interp1d
 
 from .smoother import LinearSmoother
 from .utils import multinterp, setattr_context
