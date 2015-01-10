@@ -12,6 +12,13 @@ Bug Fixes:
 
 - Algorithmic fix: previous version was not correctly interpolating in the last step of the supersmoother.
 
+### Version 0.2.1
+
+Bug fix release:
+
+- Add tests and fix minor corner cases in utils
+- By default, use fast rather than slow method for supersmoother
+
 
 ## Version 0.1
 
