@@ -19,6 +19,7 @@ class SuperSmoother(LinearSmoother):
         If specified, the bass enhancement / smoothing level (0 < alpha < 10)
     period : float (default = None)
         if specified, then assume the data is periodic with the given period.
+        [This feature is not yet implemented].
 
     Other Parameters
     ----------------
@@ -46,11 +47,10 @@ class SuperSmoother(LinearSmoother):
     def __init__(self, alpha=None, period=None,
                  primary_spans=(0.05, 0.2, 0.5),
                  middle_span=0.2, final_span=0.05):
-        if alpha is not None:
-            raise NotImplementedError("bass enhancement not implemented")
         if period is not None:
             raise NotImplementedError("periodic inputs not implemented")
 
+        self.alpha = alpha
         self.primary_spans = np.sort(np.unique(primary_spans))
         self.middle_span = middle_span
         self.final_span = final_span
@@ -74,6 +74,13 @@ class SuperSmoother(LinearSmoother):
 
         # 3. Select span yielding best residual at each point
         best_spans = self.primary_spans[np.argmin(smoothed_resids, 0)]
+
+        # 3a. Apply bass enhancement, if necessary
+        if self.alpha is not None:
+            alpha = np.clip(self.alpha, 0, 10)
+            minresid = smoothed_resids.min(0)
+            factor = (minresid / smoothed_resids[-1]) ** (10 - alpha)
+            best_spans += factor * (self.primary_spans[-1] - best_spans)
 
         # 4. Smooth best span estimates with midrange span
         self.spansmoother = LinearSmoother(self.middle_span)

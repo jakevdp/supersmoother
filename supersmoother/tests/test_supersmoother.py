@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less, assert_equal
 
-from .. import SuperSmoother
+from .. import SuperSmoother, LinearSmoother
 
 
 def make_sine(N=100, err=0.05, rseed=None):
@@ -47,3 +47,23 @@ def test_line_linear():
     model = SuperSmoother().fit(t, y, dy)
     yfit = model.predict(tfit)
     assert_allclose(tfit, yfit, atol=1E-5)
+
+
+def test_bass_enhancement_zero():
+    """Test low-level bass enhancement"""
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+
+    model1 = SuperSmoother(alpha=0).fit(t, y, dy)
+    model2 = SuperSmoother().fit(t, y, dy)
+
+    assert_allclose(model1.predict(t), model2.predict(t), atol=1E-3)
+
+
+def test_bass_enhancement_10():
+    """Test high-level bass enhancement"""
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+
+    model1 = SuperSmoother(alpha=10).fit(t, y, dy)
+    model2 = LinearSmoother(span=0.5).fit(t, y, dy)
+
+    assert_allclose(model1.predict(t), model2.predict(t), atol=1E-1)
