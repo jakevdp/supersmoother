@@ -1,7 +1,7 @@
 from .. import utils
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_
+from numpy.testing import assert_allclose, assert_, assert_equal
 
 
 def test_iterable():
@@ -9,6 +9,41 @@ def test_iterable():
     y = 1
     assert_(utils.iterable(x))
     assert_(not utils.iterable(y))
+
+
+def test_multiinterp(rseed=0, N=100):
+    """Test of the multinterp function"""
+    rng = np.random.RandomState(rseed)
+
+    def check_match(k):
+        x = np.sort(rng.rand(k))
+        y = rng.rand(k, N)
+        xquery = rng.rand(N)
+
+        res1 = utils.multinterp(x, y, xquery, slow=False)
+        res2 = utils.multinterp(x, y, xquery, slow=True)
+        print(abs(res1 - res2))
+        assert_allclose(res1, res2)
+
+    for k in 3, 4, 5:
+        yield check_match, k
+
+
+def test_setattr_context():
+    """Test of the setattr_context() function"""
+    class Foo(object): pass
+    f = Foo()
+    f.attr = "abc"
+    with utils.setattr_context(f, attr="123"):
+        assert_equal(f.attr, "123")
+    assert_equal(f.attr, "abc")
+
+    try:
+        with utils.setattr_context(f, attr="123"):
+            raise ValueError()
+    except:
+        pass
+    assert_equal(f.attr, "abc")
 
 
 def test_validate_inputs_nosort(N=10, rseed=0):
