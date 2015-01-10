@@ -262,7 +262,7 @@ def multinterp(x, y, xquery, slow=False):
         array of query values
     slow : boolean, default=False
         if True, use slow method (used mainly for unit testing)
-    
+
     Returns
     -------
     yquery : ndarray, shape=(M,)
