@@ -215,7 +215,8 @@ def test_smooth_assertions():
         assert_raises(ValueError, method, t, y, dy)
 
         # Both spans set
-        assert_raises(ValueError, method, t, y, dy, span=1, span_out=1)
+        assert_raises(ValueError, method, t, y, dy, span=1,
+                      t_out=t, span_out=1)
 
         # span_out set without t_out
         assert_raises(ValueError, method, t, y, dy, span_out=1)

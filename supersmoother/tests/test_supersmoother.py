@@ -67,3 +67,26 @@ def test_bass_enhancement_10():
     model2 = LinearSmoother(span=0.5).fit(t, y, dy)
 
     assert_allclose(model1.predict(t), model2.predict(t), atol=1E-1)
+
+
+
+def test_cv_interface():
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+    model = SuperSmoother().fit(t, y, dy)
+
+    def check_model(cv, skip_endpoints):
+        cv_values = model.cv_values(cv=cv)
+        cv_residuals = (model.y - cv_values) / model.dy
+        if skip_endpoints:
+            cv_error = np.mean(abs(cv_residuals[1:-1]))
+        else:
+            cv_error = np.mean(abs(cv_residuals))
+
+        assert_allclose(cv_residuals,
+                        model.cv_residuals(cv=cv))
+        assert_allclose(cv_error,
+                        model.cv_error(cv=cv, skip_endpoints=skip_endpoints))
+
+    for cv in [True, False]:
+        for skip_endpoints in [True, False]:
+            yield check_model, cv, skip_endpoints
