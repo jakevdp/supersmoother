@@ -93,7 +93,7 @@ class SuperSmoother(LinearSmoother):
                                  self.primary_spans[-1])
         self.ysmooth_raw = multinterp(self.primary_spans,
                                       ysmooth_primary,
-                                      smoothed_spans, slow=True)
+                                      smoothed_spans)
 
         # The final smooth is done over self.ysmooth_raw with a constant span
         # width given by self.final_span.
