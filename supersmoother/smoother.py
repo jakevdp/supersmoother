@@ -62,7 +62,7 @@ class Smoother(object):
         resids = self.cv_residuals(cv)
         if skip_endpoints:
             resids = resids[1:-1]
-        return np.mean(resids ** 2)
+        return np.mean(abs(resids))
 
     def _validate_inputs(self, t, y, dy, presorted=False):
         t, y, dy = np.broadcast_arrays(t, y, dy)

@@ -126,8 +126,14 @@ def windowed_sum(*arrays, **kwargs):
                                        count=len(array)))
     elif span.ndim == 0:
         # Fast fixed-span
-        window = np.ones(span)
-        results = [np.convolve(a, window, mode='same') for a in arrays]
+        window = np.ones(span)        
+        def convolve_same(a, window):
+            res = np.convolve(a, window, mode='same')
+            if len(res) > len(a):
+                res = res[len(res) // 2 - len(a) // 2:][:len(a)]
+            return res
+        results = [convolve_same(a, window) for a in arrays]
+
     else:
         # Fast variable-span
         if indices is None:
@@ -236,6 +242,7 @@ def linear_smooth(t, y, dy, span=None, cv=True,
     w, tw, yw, ttw, tyw = windowed_sum(w, t * w, y * w, t * t * w, t * y * w,
                                        span=span, indices=indices,
                                        subtract_mid=cv)
+
     denominator = (w * ttw - tw * tw)
     slope = (tyw * w - tw * yw)
     intercept = (ttw * yw - tyw * tw)
