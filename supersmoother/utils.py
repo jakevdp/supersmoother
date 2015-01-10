@@ -146,30 +146,40 @@ def windowed_sum(*arrays, **kwargs):
     return tuple(results)
 
 
-def moving_average_smooth(t, y, dy, span, t_out=None, cv=True,
-                          tie_span_to_t_out=False):
+def moving_average_smooth(t, y, dy, span=None, cv=True,
+                          t_out=None, span_out=None):
     """Perform a moving-average smooth of the data
 
     Parameters
     ----------
     t, y, dy : array_like
         time, value, and error in value of the input data
-    span : int
-        the integer span of the data
+    span : array_like
+        the integer spans of the data
     cv : boolean (default=True)
         if True, treat the problem as a cross-validation, i.e. don't use
         each point in the evaluation of its own smoothing.
+    t_out : array_like (optional)
+        the output times for the moving averages
+    span_out : array_like (optional)
+        the spans associated with the output times t_out
 
     Returns
     -------
     y_smooth : array_like
-        smoothed y values at each time t
+        smoothed y values at each time t (or t_out)
     """
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
 
-    if tie_span_to_t_out and t_out is not None:
-        span, t_out = np.broadcast_arrays(span, t_out)
+    if span_out is not None:
+        if t_out is None:
+            raise ValueError("Must specify t_out when span_out is given")
+        if span is not None:
+            raise ValueError("Must specify only one of span, span_out")
+        span, t_out = np.broadcast_arrays(span_out, t_out)
         indices = np.searchsorted(t, t_out)
+    elif span is None:
+        raise ValueError("Must specify either span_out or span")
     else:
         indices = None
 
@@ -177,43 +187,48 @@ def moving_average_smooth(t, y, dy, span, t_out=None, cv=True,
     w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv,
                          indices=indices)
 
-    if t_out is None or tie_span_to_t_out:
+    if t_out is None or span_out is not None:
         return yw / w
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return yw[i] / w[i]
 
 
-def moving_average_smooth_varspan(t, y, dy, span, t_out):
-    return moving_average_smooth(t, y, dy, span, t_out,
-                                 tie_span_to_t_out=True, cv=False)
-
-
-def linear_smooth(t, y, dy, span, t_out=None, cv=True,
-                  tie_span_to_t_out=False):
+def linear_smooth(t, y, dy, span=None, cv=True,
+                  t_out=None, span_out=None):
     """Perform a linear smooth of the data
 
     Parameters
     ----------
     t, y, dy : array_like
         time, value, and error in value of the input data
-    span : int
-        the integer span of the data
+    span : array_like
+        the integer spans of the data
     cv : boolean (default=True)
         if True, treat the problem as a cross-validation, i.e. don't use
         each point in the evaluation of its own smoothing.
+    t_out : array_like (optional)
+        the output times for the moving averages
+    span_out : array_like (optional)
+        the spans associated with the output times t_out
 
     Returns
     -------
     y_smooth : array_like
-        smoothed y values at each time t
+        smoothed y values at each time t or t_out
     """
     t_input = t
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
 
-    if tie_span_to_t_out and t_out is not None:
-        span, t_out = np.broadcast_arrays(span, t_out)
+    if span_out is not None:
+        if t_out is None:
+            raise ValueError("Must specify t_out when span_out is given")
+        if span is not None:
+            raise ValueError("Must specify only one of span, span_out")
+        span, t_out = np.broadcast_arrays(span_out, t_out)
         indices = np.searchsorted(t, t_out)
+    elif span is None:
+        raise ValueError("Must specify either span_out or span")
     else:
         indices = None
 
@@ -227,16 +242,11 @@ def linear_smooth(t, y, dy, span, t_out=None, cv=True,
 
     if t_out is None:
         return (slope * t_input + intercept) / denominator
-    elif tie_span_to_t_out:
+    elif span_out is not None:
         return (slope * t_out + intercept) / denominator
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return (slope[i] * t_out + intercept[i]) / denominator[i]
-
-
-def linear_smooth_varspan(t, y, dy, span, t_out):
-    return linear_smooth(t, y, dy, span, t_out,
-                         tie_span_to_t_out=True, cv=False)
 
 
 def multinterp(x, y, xquery, slow=False):

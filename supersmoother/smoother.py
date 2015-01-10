@@ -1,8 +1,6 @@
 from __future__ import division, print_function
 import numpy as np
-from .utils import (linear_smooth, moving_average_smooth,
-                    linear_smooth_varspan, moving_average_smooth_varspan,
-                    iterable)
+from .utils import linear_smooth, moving_average_smooth, iterable
 
 __all__ = ['MovingAverageSmoother', 'LinearSmoother']
 
@@ -120,16 +118,15 @@ class MovingAverageSmoother(SpannedSmoother):
     """
     def _predict(self, t):
         if callable(self.span):
-            return moving_average_smooth_varspan(self.t, self.y, self.dy,
-                                                 span=self.span_int(t),
-                                                 t_out=t)
+            return moving_average_smooth(self.t, self.y, self.dy, cv=False,
+                                         span_out=self.span_int(t), t_out=t)
         else:
-            return moving_average_smooth(self.t, self.y, self.dy,
-                                         self.span_int(), cv=False, t_out=t)
+            return moving_average_smooth(self.t, self.y, self.dy, cv=False,
+                                         span=self.span_int(), t_out=t)
 
     def _cv_values(self, cv=True):
-        return moving_average_smooth(self.t, self.y, self.dy,
-                                     self.span_int(), cv=cv)
+        return moving_average_smooth(self.t, self.y, self.dy, cv=cv,
+                                     span=self.span_int())
 
 
 class LinearSmoother(SpannedSmoother):
@@ -144,12 +141,12 @@ class LinearSmoother(SpannedSmoother):
     """
     def _predict(self, t):
         if callable(self.span):
-            return linear_smooth_varspan(self.t, self.y, self.dy,
-                                         span=self.span_int(t), t_out=t)
+            return linear_smooth(self.t, self.y, self.dy, cv=False,
+                                 span_out=self.span_int(t), t_out=t)
         else:
-            return linear_smooth(self.t, self.y, self.dy,
-                                 self.span_int(), cv=False, t_out=t)
+            return linear_smooth(self.t, self.y, self.dy, cv=False,
+                                 span=self.span_int(), t_out=t)
 
     def _cv_values(self, cv=True):
-        return linear_smooth(self.t, self.y, self.dy,
-                             self.span_int(), cv=cv)
+        return linear_smooth(self.t, self.y, self.dy, cv=cv,
+                             span=self.span_int())
