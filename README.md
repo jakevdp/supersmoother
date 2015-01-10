@@ -12,13 +12,14 @@ for fast numerical computation.
 Installation
 ------------
 Installation is simple: To install the released version, type
-```
-$ pip install supersmoother
-```
+
+    $ pip install supersmoother
+
 To install the bleeding-edge source, download the source code from http://github.com/jakevdp/supersmoother and type:
-```
-$ python setup.py install
-```
+
+    $ python setup.py install
+
+The only package dependency is ``numpy``; ``scipy`` is also required if you want to run the unit tests.
 
 Example
 -------
