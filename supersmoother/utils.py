@@ -86,6 +86,9 @@ def windowed_sum(*arrays, **kwargs):
     slow : boolean
         If true, use a slow method to compute the result. This is
         primarily useful for testing and validation.
+    indices : array
+        the indices of the center of the desired windows. If provided,
+        it must be broadcastable with the span.
 
     Returns
     -------
@@ -95,6 +98,7 @@ def windowed_sum(*arrays, **kwargs):
     span = kwargs.pop('span', None)
     subtract_mid = kwargs.pop('subtract_mid', False)
     slow = kwargs.pop('slow', False)
+    indices = kwargs.pop('indices', None)
 
     if kwargs:
         raise ValueError("Unrecognized keywords: {0}".format(kwargs.keys()))
@@ -105,6 +109,9 @@ def windowed_sum(*arrays, **kwargs):
     span = np.asarray(span, dtype=int)
     if not np.all(span > 0):
         raise ValueError("span values must be positive")
+
+    if indices is not None:
+        span, indices = np.broadcast_arrays(span, indices)
 
     if slow:
         # Slow fixed/variable span
@@ -117,20 +124,20 @@ def windowed_sum(*arrays, **kwargs):
             results.append(np.fromiter(result,
                                        dtype=array.dtype,
                                        count=len(array)))
-
     elif span.ndim == 0:
         # Fast fixed-span
         window = np.ones(span)
         results = [np.convolve(a, window, mode='same') for a in arrays]
-
     else:
         # Fast variable-span
-        window = np.asarray(span)
-        mins = np.arange(len(window)) - window // 2
+        if indices is None:
+            indices = np.arange(len(span))
+        mins = np.asarray(indices) - span // 2
+
         results = []
         for a in map(np.asarray, arrays):
             ranges = np.vstack([np.maximum(0, mins),
-                                np.minimum(len(a), mins + window)]).ravel('F')
+                                np.minimum(len(a), mins + span)]).ravel('F')
             results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
 
     if subtract_mid:
@@ -139,45 +146,8 @@ def windowed_sum(*arrays, **kwargs):
     return tuple(results)
 
 
-def windowed_sum_varspan(*arrays, **kwargs):
-    """TODO: document this
-    TODO: combine with windowed_sum??
-    """
-    span = kwargs.pop('span', None)
-    indices = kwargs.pop('indices', None)
-    slow = kwargs.pop('slow', False)
-
-    if kwargs:
-        raise ValueError("Unrecognized keywords: {0}".format(kwargs.keys()))
-
-    if span is None:
-        raise ValueError("Must provide a positive spans")
-
-    if indices is None:
-        raise ValueError("Must provide an array of indices")
-
-    span = np.asarray(span, dtype=int)
-    if not np.all(span > 0):
-        raise ValueError("span values must be positive")
-
-    span, indices = np.broadcast_arrays(span, indices)
-
-    if slow:
-        raise ValueError("slow version not implemented")
-    else:
-        window = np.asarray(span)
-        mins = indices - window // 2
-
-        results = []
-        for a in map(np.asarray, arrays):
-            ranges = np.vstack([np.maximum(0, mins),
-                                np.minimum(len(a), mins + window)]).ravel('F')
-            results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
-
-    return results
-
-
-def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
+def moving_average_smooth(t, y, dy, span, t_out=None, cv=True,
+                          tie_span_to_t_out=False):
     """Perform a moving-average smooth of the data
 
     Parameters
@@ -196,10 +166,18 @@ def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
         smoothed y values at each time t
     """
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
-    w = dy ** -2
-    w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv)
 
-    if t_out is None:
+    if tie_span_to_t_out and t_out is not None:
+        span, t_out = np.broadcast_arrays(span, t_out)
+        indices = np.searchsorted(t, t_out)
+    else:
+        indices = None
+
+    w = dy ** -2
+    w, yw = windowed_sum(w, y * w, span=span, subtract_mid=cv,
+                         indices=indices)
+
+    if t_out is None or tie_span_to_t_out:
         return yw / w
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
@@ -207,21 +185,12 @@ def moving_average_smooth(t, y, dy, span, cv=True, t_out=None):
 
 
 def moving_average_smooth_varspan(t, y, dy, span, t_out):
-    """
-    TODO: doc
-    TODO: combine with standard linear smooth?
-    span matches t_out
-    """
-    t, y, dy = validate_inputs(t, y, dy, sort_by=t)
-    indices = np.searchsorted(t, t_out)
-
-    w = dy ** -2
-    w, yw = windowed_sum_varspan(w, y * w, span=span, indices=indices)
-
-    return yw / w
+    return moving_average_smooth(t, y, dy, span, t_out,
+                                 tie_span_to_t_out=True, cv=False)
 
 
-def linear_smooth(t, y, dy, span, t_out=None, cv=True):
+def linear_smooth(t, y, dy, span, t_out=None, cv=True,
+                  tie_span_to_t_out=False):
     """Perform a linear smooth of the data
 
     Parameters
@@ -240,40 +209,34 @@ def linear_smooth(t, y, dy, span, t_out=None, cv=True):
         smoothed y values at each time t
     """
     t_input = t
-
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
+
+    if tie_span_to_t_out and t_out is not None:
+        span, t_out = np.broadcast_arrays(span, t_out)
+        indices = np.searchsorted(t, t_out)
+    else:
+        indices = None
+
     w = dy ** -2
     w, tw, yw, ttw, tyw = windowed_sum(w, t * w, y * w, t * t * w, t * y * w,
-                                       span=span, subtract_mid=cv)
+                                       span=span, indices=indices,
+                                       subtract_mid=cv)
     denominator = (w * ttw - tw * tw)
     slope = (tyw * w - tw * yw)
     intercept = (ttw * yw - tyw * tw)
 
     if t_out is None:
         return (slope * t_input + intercept) / denominator
+    elif tie_span_to_t_out:
+        return (slope * t_out + intercept) / denominator
     else:
         i = np.minimum(len(t) - 1, np.searchsorted(t, t_out))
         return (slope[i] * t_out + intercept[i]) / denominator[i]
 
 
 def linear_smooth_varspan(t, y, dy, span, t_out):
-    """
-    TODO: doc
-    TODO: combine with standard linear smooth?
-    span matches t_out
-    """
-    t, y, dy = validate_inputs(t, y, dy, sort_by=t)
-    indices = np.searchsorted(t, t_out)
-
-    w = dy ** -2
-    w, tw, yw, ttw, tyw = windowed_sum_varspan(w, t * w, y * w,
-                                               t * t * w, t * y * w,
-                                               span=span, indices=indices)
-    denominator = (w * ttw - tw * tw)
-    slope = (tyw * w - tw * yw)
-    intercept = (ttw * yw - tyw * tw)
-
-    return (slope * t_out + intercept) / denominator
+    return linear_smooth(t, y, dy, span, t_out,
+                         tie_span_to_t_out=True, cv=False)
 
 
 def multinterp(x, y, xquery, slow=False):
