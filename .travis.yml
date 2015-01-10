@@ -25,4 +25,4 @@ before_install:
   - conda update --yes conda
 
 script:
-  - nosetests mpld3
+  - nosetests supersmoother
