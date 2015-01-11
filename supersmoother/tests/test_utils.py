@@ -116,7 +116,6 @@ def test_windowed_sum_variable(N=10, rseed=0):
 def test_windowed_sum_combinations(N=10, rseed=0):
     """test passing combinations of parameters to the windowed_sum function"""
     rng = np.random.RandomState(rseed)
-    span = rng.randint(3, 6, N)
     data = np.random.random((3, N))
 
     def check_result(indices, span, subtract_mid):
@@ -130,6 +129,24 @@ def test_windowed_sum_combinations(N=10, rseed=0):
         for span in [5, rng.randint(3, 6, N)]:
             for subtract_mid in [True, False]:
                 yield check_result, indices, span, subtract_mid
+
+
+def test_windowed_sum_indices(N=10, rseed=0):
+    """Test case where indices and span correspond"""
+    rng = np.random.RandomState(rseed)
+    data = np.random.random((3, N))
+    indices = rng.randint(0, N, N - 2)
+    span = 5
+
+    def check_result(subtract_mid):
+        assert_allclose(utils.windowed_sum(*data, span=span, indices=indices,
+                                           subtract_mid=subtract_mid),
+                        utils.windowed_sum(*data, span=span, indices=indices,
+                                           subtract_mid=subtract_mid,
+                                           slow=True))
+
+    for subtract_mid in [True, False]:
+        yield check_result, subtract_mid
 
 
 def test_windowed_sum_bad_kwargs():

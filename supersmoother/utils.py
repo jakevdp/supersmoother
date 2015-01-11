@@ -118,16 +118,17 @@ def windowed_sum(*arrays, **kwargs):
         results = []
         for array in map(np.asarray, arrays):
             assert array.ndim == 1
-            span, array = np.broadcast_arrays(span, array)
             if indices is None:
+                span, array = np.broadcast_arrays(span, array)
                 ind_spans = enumerate(span)
+                count = len(span)
             else:
-                ind_spans = zip(indices, span)
+                ind_spans = np.broadcast(indices, span)
+                count = len(indices)
             result = (array[max(0, i - s // 2): i - s // 2 + s].sum()
                       for i, s in ind_spans)
-            results.append(np.fromiter(result,
-                                       dtype=array.dtype,
-                                       count=len(array)))
+            results.append(np.fromiter(result, dtype=array.dtype, count=count))
+
     elif span.ndim == 0:
         # Fast fixed-span
         window = np.ones(span)        
