@@ -119,8 +119,12 @@ def windowed_sum(*arrays, **kwargs):
         for array in map(np.asarray, arrays):
             assert array.ndim == 1
             span, array = np.broadcast_arrays(span, array)
+            if indices is None:
+                ind_spans = enumerate(span)
+            else:
+                ind_spans = zip(indices, span)
             result = (array[max(0, i - s // 2): i - s // 2 + s].sum()
-                      for i, s, in enumerate(span))
+                      for i, s in ind_spans)
             results.append(np.fromiter(result,
                                        dtype=array.dtype,
                                        count=len(array)))
@@ -147,7 +151,9 @@ def windowed_sum(*arrays, **kwargs):
             results.append(np.add.reduceat(np.append(a, 0), ranges)[::2])
 
     if subtract_mid:
-        results = (r - a for r, a in zip(results, arrays))
+        if indices is None:
+            indices = slice(None)
+        results = (r - a[indices] for r, a in zip(results, arrays))
 
     return tuple(results)
 
