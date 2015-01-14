@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import numpy as np
 from .utils import linear_smooth, moving_average_smooth, iterable
 

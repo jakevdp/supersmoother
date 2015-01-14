@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from .. import utils
 
 import numpy as np
@@ -22,7 +23,6 @@ def test_multiinterp(rseed=0, N=100):
 
         res1 = utils.multinterp(x, y, xquery, slow=False)
         res2 = utils.multinterp(x, y, xquery, slow=True)
-        print(abs(res1 - res2))
         assert_allclose(res1, res2)
 
     for k in 3, 4, 5:
