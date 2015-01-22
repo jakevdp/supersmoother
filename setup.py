@@ -1,7 +1,15 @@
 from distutils.core import setup
 
 DESCRIPTION = "Python implementation of Friedman's Supersmoother"
-LONG_DESCRIPTION = open('README.md').read()
+LONG_DESCRIPTION = """
+SuperSmoother in Python
+=======================
+This is an efficient implementation of Friedman's SuperSmoother based in
+Python. It makes use of numpy for fast numerical computation.
+
+For more information, see the github project page:
+http://github.com/jakevdp/supersmoother
+"""
 NAME = "supersmoother"
 AUTHOR = "Jake VanderPlas"
 AUTHOR_EMAIL = "jakevdp@uw.edu"
