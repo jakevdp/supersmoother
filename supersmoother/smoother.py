@@ -68,10 +68,11 @@ class Smoother(object):
         t, y, dy = np.broadcast_arrays(t, y, dy)
         if presorted:
             self.isort = slice(None)
+        elif hasattr(self, 'period') and self.period:
+            self.isort = np.argsort(t % self.period)
         else:
             self.isort = np.argsort(t)
-            t, y, dy = t[self.isort], y[self.isort], dy[self.isort]
-        return t, y, dy
+        return t[self.isort], y[self.isort], dy[self.isort]
 
     def _fit(self):
         """Private function to perform fit() on input data"""
@@ -88,8 +89,9 @@ class Smoother(object):
 
 class SpannedSmoother(Smoother):
     """Base class for smoothers based on local spans of sorted data"""
-    def __init__(self, span):
+    def __init__(self, span, period=None):
         self.span = span
+        self.period = period
 
     def _fit(self, t, y, dy):
         pass
@@ -107,26 +109,35 @@ class SpannedSmoother(Smoother):
 
         return np.clip(spanint, 3, None)
 
+    def _predict(self, t):
+        if callable(self.span):
+            return self._smoothfunc(self.t, self.y, self.dy, cv=False,
+                                    span_out=self.span_int(t), t_out=t,
+                                    period=self.period)
+        else:
+            return self._smoothfunc(self.t, self.y, self.dy, cv=False,
+                                    span=self.span_int(), t_out=t,
+                                    period=self.period)
+
+    def _cv_values(self, cv=True):
+        return self._smoothfunc(self.t, self.y, self.dy, cv=cv,
+                                span=self.span_int(), period=self.period)
+
 
 class MovingAverageSmoother(SpannedSmoother):
     """Local smoother based on a moving average of adjacent points
 
     Parameters
     ----------
-    span : float or array
-        The fraction of the data to use at each point of the smooth
+    span : float, array, or function
+        The fraction of the data to use at each point of the smooth.
+        If a function is passed, then this will be evaluated at each input
+        time to determine the smooth.
+    period : float (optional)
+        If specified, then use a periodic smoother with the given period.
+        Default is to assume no periodicity.
     """
-    def _predict(self, t):
-        if callable(self.span):
-            return moving_average_smooth(self.t, self.y, self.dy, cv=False,
-                                         span_out=self.span_int(t), t_out=t)
-        else:
-            return moving_average_smooth(self.t, self.y, self.dy, cv=False,
-                                         span=self.span_int(), t_out=t)
-
-    def _cv_values(self, cv=True):
-        return moving_average_smooth(self.t, self.y, self.dy, cv=cv,
-                                     span=self.span_int())
+    _smoothfunc = staticmethod(moving_average_smooth)
 
 
 class LinearSmoother(SpannedSmoother):
@@ -138,15 +149,8 @@ class LinearSmoother(SpannedSmoother):
         The fraction of the data to use at each point of the smooth.
         If a function is passed, then this will be evaluated at each input
         time to determine the smooth.
+    period : float (optional)
+        If specified, then use a periodic smoother with the given period.
+        Default is to assume no periodicity.
     """
-    def _predict(self, t):
-        if callable(self.span):
-            return linear_smooth(self.t, self.y, self.dy, cv=False,
-                                 span_out=self.span_int(t), t_out=t)
-        else:
-            return linear_smooth(self.t, self.y, self.dy, cv=False,
-                                 span=self.span_int(), t_out=t)
-
-    def _cv_values(self, cv=True):
-        return linear_smooth(self.t, self.y, self.dy, cv=cv,
-                             span=self.span_int())
+    _smoothfunc = staticmethod(linear_smooth)

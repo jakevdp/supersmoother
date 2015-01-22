@@ -14,11 +14,10 @@ class SuperSmoother(LinearSmoother):
 
     Parameters
     ----------
-    alpha : float (default = None)
-        If specified, the bass enhancement / smoothing level (0 < alpha < 10)
-    period : float (default = None)
-        if specified, then assume the data is periodic with the given period.
-        [This feature is not yet implemented].
+    alpha : float (optional)
+        If specified, the bass enhancement / smoothing level (0 < alpha < 10).
+    period : float (optional)
+        If specified, then assume the data is periodic with the given period.
 
     Other Parameters
     ----------------
@@ -46,18 +45,16 @@ class SuperSmoother(LinearSmoother):
     def __init__(self, alpha=None, period=None,
                  primary_spans=(0.05, 0.2, 0.5),
                  middle_span=0.2, final_span=0.05):
-        if period is not None:
-            raise NotImplementedError("periodic inputs not implemented")
-
         self.alpha = alpha
+        self.period = period
         self.primary_spans = np.sort(np.unique(primary_spans))
         self.middle_span = middle_span
         self.final_span = final_span
-        self.primary_smooths = [LinearSmoother(span)
+        self.primary_smooths = [LinearSmoother(span, period)
                                 for span in self.primary_spans]
 
     def _fit(self, t, y, dy):
-        mid_smooth = LinearSmoother(self.middle_span)
+        mid_smooth = LinearSmoother(self.middle_span, self.period)
 
         # 1. Compute three smoothed curves and get residuals
         ysmooth_primary = np.array([smoother.fit(t, y, dy, presorted=True)
@@ -82,7 +79,7 @@ class SuperSmoother(LinearSmoother):
             best_spans += factor * (self.primary_spans[-1] - best_spans)
 
         # 4. Smooth best span estimates with midrange span
-        self.spansmoother = LinearSmoother(self.middle_span)
+        self.spansmoother = LinearSmoother(self.middle_span, self.period)
         self.spansmoother.fit(t, best_spans, dy, presorted=True)
         smoothed_spans = self.spansmoother.cv_values(cv=False)
 
