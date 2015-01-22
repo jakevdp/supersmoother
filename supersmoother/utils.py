@@ -370,8 +370,8 @@ def moving_average_smooth(t, y, dy, span=None, cv=True,
     t, y, dy, span, t_out, span_out, indices = prep
 
     w = dy ** -2
-    w, yw = windowed_sum([w, y * w], span=span, subtract_mid=cv,
-                         indices=indices)
+    w, yw = windowed_sum([w, y * w], t=t, span=span, subtract_mid=cv,
+                         indices=indices, period=period)
 
     if t_out is None or span_out is not None:
         return yw / w
@@ -415,7 +415,7 @@ def linear_smooth(t, y, dy, span=None, cv=True,
     w, yw, tw, tyw, ttw = windowed_sum([w, y * w, w, y * w, w], t=t,
                                        tpowers=[0, 0, 1, 1, 2],
                                        span=span, indices=indices,
-                                       subtract_mid=cv)
+                                       subtract_mid=cv, period=period)
 
     denominator = (w * ttw - tw * tw)
     slope = (tyw * w - tw * yw)

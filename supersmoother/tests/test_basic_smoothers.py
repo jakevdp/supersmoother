@@ -174,3 +174,27 @@ def test_span_extremes():
         for span in (-1, 0, 1, 2):
             yield check_model, Model, span
     
+
+def test_periodic():
+    rng = np.random.RandomState(0)
+    N = 10
+    period = 1
+    t = np.linspace(0, period, N, endpoint=False)
+    y = rng.rand(N)
+
+    t_folded = np.concatenate([-period + t, t, t + period])
+    y_folded = np.concatenate([y, y, y])
+
+    def check_model(Model, span):
+        model1 = Model(span / len(t_folded), period=None)
+        model2 = Model(span / len(t), period=period)
+
+        model1.fit(t_folded, y_folded)
+        model2.fit(t, y)
+
+        assert_allclose(model1.predict(t), model2.predict(t))
+    
+
+    for Model in [MovingAverageSmoother, LinearSmoother]:
+        for span in [3, 4, 5]:
+            yield check_model, Model, span
