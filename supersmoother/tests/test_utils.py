@@ -264,6 +264,23 @@ def test_windowed_sum_fast_vs_slow():
                                        subtract_mid, tpowers, period, use_t)
 
 
+def test_windowed_sum_bad_args(N=10):
+    #"""windowed sum in the simplest case"""
+    rng = np.random.RandomState(0)
+    a = rng.rand(N)
+    t = np.arange(N)
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        wsum(arrays=[a, a], span=5, t=t)
+        assert_raises(ValueError, wsum, arrays=[a, a], span=5, t=t[:-1])
+        assert_raises(ValueError, wsum, arrays=[a, a[:-1]], span=5, t=t)
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        wsum(arrays=[a, a], span=5, tpowers=[0, 1])
+        assert_raises(ValueError, wsum, arrays=[a, a],
+                      span=5, tpowers=[0, 1, 2])
+
+
 def make_linear(N=100, err=1E-6, rseed=None):
     rng = np.random.RandomState(rseed)
     t = 10 * rng.rand(N)

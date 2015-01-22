@@ -205,9 +205,7 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
         # XXX: special-case no t?
         t = np.ones(N)
     
-    tpowers = tpowers + np.zeros(len(arrays))
-    if len(tpowers) != len(arrays):
-        raise ValueError("tpowers must be broadcastable with number of arrays")
+    tpowers = np.asarray(tpowers) + np.zeros(len(arrays))
 
     if indices is not None:
         span, indices = np.broadcast_arrays(span, indices)

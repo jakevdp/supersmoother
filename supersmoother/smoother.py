@@ -74,7 +74,7 @@ class Smoother(object):
             self.isort = np.argsort(t)
         return t[self.isort], y[self.isort], dy[self.isort]
 
-    def _fit(self):
+    def _fit(self, t, y, dy):
         """Private function to perform fit() on input data"""
         raise NotImplementedError()
 

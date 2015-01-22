@@ -1,9 +1,11 @@
 from __future__ import absolute_import, division
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less, assert_equal
+from numpy.testing import (assert_allclose, assert_array_less,
+                           assert_equal, assert_raises)
 
 from .. import MovingAverageSmoother, LinearSmoother
+from ..smoother import Smoother
 
 
 def make_sine(N=100, err=0.05, rseed=None):
@@ -198,3 +200,16 @@ def test_periodic():
     for Model in [MovingAverageSmoother, LinearSmoother]:
         for span in [3, 4, 5]:
             yield check_model, Model, span
+
+
+def test_baseclass():
+    # silly tests to bring coverage to 100%
+    assert_raises(NotImplementedError, Smoother)
+    class Derived(Smoother):
+        def __init__(self):
+            pass
+
+    d = Derived()
+    assert_raises(NotImplementedError, d.fit, [1, 2, 3], [1, 1, 1])
+    assert_raises(NotImplementedError, d.predict, [1, 2, 3])
+    assert_raises(NotImplementedError, d.cv_values)
