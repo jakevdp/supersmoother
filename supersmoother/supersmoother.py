@@ -95,7 +95,8 @@ class SuperSmoother(LinearSmoother):
         # width given by self.final_span.
         # We'll make this happen in _predict() and _cv_values() below.
 
-        # for convenience, we'll make self.span the following function:
+        # for convenience in accessing the span values (and to make subclass
+        # functions behave) set span to the spansmoother predict function.
         self.span = self.spansmoother.predict
 
     def _predict(self, t):

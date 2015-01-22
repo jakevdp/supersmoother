@@ -142,14 +142,13 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
                           * (t[j % N] + (j // N) * period) ** tpower
                           for j in range(i - s // 2,
                                          i - s // 2 + s)
-                          if not (subtract_mid and j == 0))
+                          if not (subtract_mid and j == i))
                       for i, s in np.broadcast(indices, spans)]
         else:
-            result = [sum(array[j]
-                          * t[j] ** tpower
+            result = [sum(array[j] * t[j] ** tpower
                           for j in range(max(0, i - s // 2),
                                          min(N, i - s // 2 + s))
-                          if not (subtract_mid and j == 0))
+                          if not (subtract_mid and j == i))
                       for i, s in np.broadcast(indices, spans)]
         results.append(np.asarray(result))
         
@@ -240,42 +239,43 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
             # No padding needed! We can carry-on as if it's a non-periodic case
             period = None
 
-    # The rest of the algorithm now proceeds without reference to the period:
+    # The rest of the algorithm now proceeds without reference to the period
+    # just as a sanity check...
+    assert period is None
+
     if span.ndim == 0:
-        # fixed-span case. Because of the checks above, we know
-        # here that indices=None
+        # fixed-span case. Because of the checks & manipulations above
+        # we know here that indices=None
+        assert indices is None
         window = np.ones(span)
-        if period:
-            # This should have been taken care of above
-            raise ValueError("Something went terribly wrong...")
-        else:
-            def convolve_same(a, window):
-                if len(window) <= len(a):
-                    res = np.convolve(a, window, mode='same')
-                else:
-                    res = np.convolve(a, window, mode='full')
-                    start = (len(window) - 1) // 2
-                    res = res[start:start + len(a)]
-                return res
-            results = [convolve_same(a * t ** tp, window)
-                       for a, tp in zip(arrays, tpowers)]
-            indices = slice(None)
+
+        def convolve_same(a, window):
+            if len(window) <= len(a):
+                res = np.convolve(a, window, mode='same')
+            else:
+                res = np.convolve(a, window, mode='full')
+                start = (len(window) - 1) // 2
+                res = res[start:start + len(a)]
+            return res
+        results = [convolve_same(a * t ** tp, window)
+                   for a, tp in zip(arrays, tpowers)]
+        indices = slice(None)
 
     else:
-        # variable-span case
+        # variable-span case. Use reduceat() in a clever way for speed.
         if indices is None:
             indices = np.arange(len(span))
-        if period:
-            # This should have been taken care of above
-            raise ValueError("Something went terribly wrong...")
-        else:
-            mins = np.asarray(indices) - span // 2
-            results = []
-            for a, tp in zip(arrays, tpowers):
-                ranges = np.vstack([np.maximum(0, mins),
-                                    np.minimum(len(a), mins+span)]).ravel('F')
-                results.append(np.add.reduceat(np.append(a * t ** tp, 0),
-                                               ranges)[::2])
+
+        # we checked this above, but just as a sanity check assert it here...
+        assert span.shape == indices.shape
+
+        mins = np.asarray(indices) - span // 2
+        results = []
+        for a, tp in zip(arrays, tpowers):
+            ranges = np.vstack([np.maximum(0, mins),
+                                np.minimum(len(a), mins+span)]).ravel('F')
+            results.append(np.add.reduceat(np.append(a * t ** tp, 0),
+                                           ranges)[::2])
 
     # Subtract the midpoint if required: this is used in cross-validation
     if subtract_mid:
