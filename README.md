@@ -23,7 +23,9 @@ The only package dependency is ``numpy``; ``scipy`` is also required if you want
 
 Example
 -------
-You can see an example of the code in action [on nbviewer](http://nbviewer.ipython.org/github/jakevdp/supersmoother/blob/master/examples/Supersmoother.ipynb)
+The package includes several example notebooks showing the code in action.
+You can see these in the ``examples/`` directory, or view them statically
+[on nbviewer](http://nbviewer.ipython.org/github/jakevdp/supersmoother/blob/master/examples/Index.ipynb)
 
 Testing
 -------

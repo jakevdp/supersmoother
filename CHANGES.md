@@ -1,5 +1,15 @@
 # Package ``supersmoother`` Change Log
 
+## Version 0.3
+
+New Features:
+
+- Implement periodic smoothing
+
+Bug Fixes:
+
+- Fixed some issues with NaNs in corner cases of variable span smoothing
+
 ## Version 0.2
 
 New Features:
