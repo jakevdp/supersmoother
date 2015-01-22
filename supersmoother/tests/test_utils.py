@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from .. import utils
+from ..utils import windowed_sum, windowed_sum_slow
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_, assert_equal, assert_raises
@@ -88,86 +89,179 @@ def test_validate_inputs_fail():
     assert_raises(ValueError, utils.validate_inputs, t, y, dy, sort_by=[1])
 
 
-def test_windowed_sum_fixed(N=10, span=5, rseed=0):
-    """Test the windowed sum for a fixed-span"""
-    rng = np.random.RandomState(rseed)
-    data = rng.rand(3, N)
-
-    for subtract_mid in [True, False]:
-        assert_allclose(utils.windowed_sum(*data, span=span,
-                                           subtract_mid=subtract_mid),
-                        utils.windowed_sum(*data, span=span, slow=True,
-                                           subtract_mid=subtract_mid))
-
-
-def test_windowed_sum_variable(N=10, rseed=0):
-    """Test the windowed sum for a variable span"""
-    rng = np.random.RandomState(rseed)
-    span = rng.randint(3, 6, N)
-    data = np.random.random((3, N))
-
-    for subtract_mid in [True, False]:
-        assert_allclose(utils.windowed_sum(*data, span=span,
-                                           subtract_mid=subtract_mid),
-                        utils.windowed_sum(*data, span=span, slow=True,
-                                           subtract_mid=subtract_mid))
+def _fixed_span_sum(a, span, subtract_mid=False):
+    """fixed-span sum; used for testing windowed_span"""
+    window = np.ones(span)
+    if span <= len(a):
+        res = np.convolve(a, window, mode='same')
+    else:
+        start = (span - 1) // 2
+        res = np.convolve(a, window, mode='full')[start:start + len(a)]
+    if subtract_mid:
+        res -= a
+    return res
 
 
-def test_windowed_sum_combinations(N=10, rseed=0):
-    """test passing combinations of parameters to the windowed_sum function"""
-    rng = np.random.RandomState(rseed)
-    data = np.random.random((3, N))
-
-    def check_result(indices, span, subtract_mid):
-        assert_allclose(utils.windowed_sum(*data, span=span, indices=indices,
-                                           subtract_mid=subtract_mid),
-                        utils.windowed_sum(*data, span=span, indices=indices,
-                                           subtract_mid=subtract_mid,
-                                           slow=True))
-
-    for indices in [None, rng.randint(0, N, N)]:
-        for span in [5, rng.randint(3, 6, N)]:
-            for subtract_mid in [True, False]:
-                yield check_result, indices, span, subtract_mid
+def _variable_span_sum(a, span, subtract_mid=False):
+    """variable-span sum, using multiple runs of _fixed_span_sum"""
+    a, spans = np.broadcast_arrays(a, span)
+    unique_spans, inv = np.unique(spans, return_inverse=True)
+    results = [_fixed_span_sum(a, s, subtract_mid) for s in unique_spans]
+    return np.asarray([results[j][i] for i, j in enumerate(inv)])
 
 
-def test_windowed_sum_indices(N=10, rseed=0):
-    """Test case where indices and span correspond"""
-    rng = np.random.RandomState(rseed)
-    data = np.random.random((3, N))
-    indices = rng.randint(0, N, N - 2)
-    span = 5
-
-    def check_result(subtract_mid):
-        assert_allclose(utils.windowed_sum(*data, span=span, indices=indices,
-                                           subtract_mid=subtract_mid),
-                        utils.windowed_sum(*data, span=span, indices=indices,
-                                           subtract_mid=subtract_mid,
-                                           slow=True))
-
-    for subtract_mid in [True, False]:
-        yield check_result, subtract_mid
-
-
-def test_windowed_sum_bad_kwargs():
+def test_windowed_sum_simple():
+    #"""windowed sum in the simplest case"""
     rng = np.random.RandomState(0)
-    span = rng.randint(3, 6, 10)
-    data = np.random.random((3, 10))
+        
+    def check_results(wsum, N, span):
+        a = rng.rand(N)
+        assert_allclose([_fixed_span_sum(a, span),
+                         _fixed_span_sum(a ** 2, span)],
+                        wsum([a, a ** 2], span))
 
-    # no span specified
-    assert_raises(ValueError, utils.windowed_sum, *data)
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
 
-    # non-positive span
-    assert_raises(ValueError, utils.windowed_sum, *data, span=0)
 
-    # nonsense keyword argument
-    assert_raises(ValueError, utils.windowed_sum, *data, gobbledeygook='yay')
+def test_windowed_sum_with_t():
+    #"""windowed sum with powers of t"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(wsum, N, span):
+        a = rng.rand(N)
+        t = np.sort(rng.rand(N))
+        assert_allclose([_fixed_span_sum(a, span),
+                         _fixed_span_sum(a * t, span)],
+                        wsum([a, a], span, t=t, tpowers=[0, 1]))
 
-    for subtract_mid in [True, False]:
-        assert_allclose(utils.windowed_sum(*data, span=span,
-                                           subtract_mid=subtract_mid),
-                        utils.windowed_sum(*data, span=span, slow=True,
-                                           subtract_mid=subtract_mid))
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
+
+
+def test_windowed_sum_varspan():
+    #"""windowed sum with a variable span"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(wsum, N):
+        a = rng.rand(N)
+        span = rng.randint(1, 5, N)
+        assert_allclose([_variable_span_sum(a, span),
+                         _variable_span_sum(a ** 2, span)],
+                        wsum([a, a ** 2], span))
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            yield check_results, wsum, N
+
+
+def test_windowed_sum_with_period():
+    #"""windowed sum with period"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(wsum, N, span, tpowers, period=0.6):
+        a = rng.rand(N)
+        t = np.sort(period * rng.rand(N))
+
+        # find the periodic result straightforwardly by concatenating arrays
+        a_all = np.concatenate([a for i in range(6)])
+        t_all = np.concatenate([t + i * period for i in range(-3, 3)])
+
+        res1 = wsum(len(tpowers) * [a_all], span, t=t_all,
+                    tpowers=tpowers, period=None)
+        res1 = [a[3 * N: 4 * N] for a in res1]
+        res2 = wsum(len(tpowers) * [a], span, t=t,
+                    tpowers=tpowers, period=period)
+        assert_allclose(res1, res2)
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(4, 7):
+            for span in range(1, 7):
+                for tpowers in [(0, 1), (0, 1, 2)]:
+                    yield check_results, wsum, N, span, tpowers
+    
+
+def test_windowed_sum_with_indices():
+    #"""windowed sum with indices"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(wsum, N, span):
+        ind = rng.randint(0, N, 4)
+        a = rng.rand(N)
+        t = np.sort(rng.rand(N))
+
+        res1 = wsum([a, a], span, t=t, tpowers=[0, 1])
+        res1 = [a[ind] for a in res1]
+        res2 = wsum([a, a], span, t=t, tpowers=[0, 1],
+                                 indices=ind)
+        
+        assert_allclose(res1, res2)
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(4, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
+
+
+def test_windowed_sum_subtract_mid():
+    #"""windowed sum, subtracting the middle item"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(wsum, N, span):
+        a = rng.rand(N)
+        t = np.sort(rng.rand(N))
+        assert_allclose([_fixed_span_sum(a, span, subtract_mid=True),
+                         _fixed_span_sum(a * t, span, subtract_mid=True)],
+                        wsum([a, a], span, t=t, tpowers=[0, 1],
+                             subtract_mid=True))
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
+
+
+def test_windowed_sum_fast_vs_slow():
+    #"""Test fast vs slow windowed sum for many combinations of parameters"""
+    rng = np.random.RandomState(0)
+        
+    def check_results(N, span, indices, subtract_mid,
+                      tpowers, period, use_t):
+        a = rng.rand(N)
+        t = np.sort(rng.rand(N))
+        if period:
+            t *= period
+
+        if np.asarray(tpowers).size == 1:
+            arrs = [a]
+        else:
+            arrs = len(tpowers) * [a]
+
+        if not use_t:
+            t = None
+
+        res1 = windowed_sum_slow(arrs, span, t=t, subtract_mid=subtract_mid,
+                                 indices=indices, tpowers=tpowers,
+                                 period=period)
+        res2 = windowed_sum(arrs, span, t=t, subtract_mid=subtract_mid,
+                            indices=indices, tpowers=tpowers, period=period)
+        assert_allclose(res1, res2)
+
+    for N in [3, 5, 7]:
+        for span in [3, 5, rng.randint(2, 5, N)]:
+            for indices in [None, rng.randint(0, N, N)]:
+                for subtract_mid in [True, False]:
+                    for tpowers in [0, (0, 1)]:
+                        for period in (0.6, None):
+                            for use_t in [True, False]:
+                                if period and not use_t:
+                                    continue
+                                yield (check_results, N, span, indices,
+                                       subtract_mid, tpowers, period, use_t)
 
 
 def make_linear(N=100, err=1E-6, rseed=None):
