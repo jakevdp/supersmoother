@@ -87,35 +87,6 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
     return tuple(results)
 
 
-def pad_arrays(t, arrays, indices, span, period):
-    N = len(t)
-
-    if indices is None:
-        indices = np.arange(N)
-    pad_left = max(0, 0 - np.min(indices - span // 2))
-    pad_right = max(0, np.max(indices + span - span // 2) - (N - 1))
-
-    if pad_left + pad_right > 0:
-        Nright, pad_right = divmod(pad_right, N)
-        Nleft, pad_left = divmod(pad_left, N)
-        t = np.concatenate([t[N - pad_left:] - (Nleft + 1) * period]
-                           + [t + i * period
-                              for i in range(-Nleft, Nright + 1)]
-                           + [t[:pad_right] + (Nright + 1) * period])
-        arrays = [np.concatenate([a[N - pad_left:]]
-                                 + (Nleft + Nright + 1) * [a]
-                                 + [a[:pad_right]])
-                  for a in arrays]
-        pad_left = pad_left % N
-        Nright = pad_right / N
-        pad_right = pad_right % N
-
-        return (t, arrays, slice(pad_left + Nleft * N,
-                                 pad_left + (Nleft + 1) * N))
-    else:
-        return (t, arrays, slice(None))
-
-
 def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
                  period=None, subtract_mid=False):
     """Compute the windowed sum of the given arrays.
@@ -180,27 +151,42 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
 
     # For the periodic case, re-call the function with padded arrays
     if period:
-        t, arrays, sl = pad_arrays(t, arrays, indices, span, period)
-        if len(t) > N:
-            # TODO: special-case fixed span
-            if indices is None:
-                indices = np.arange(N)
-            indices = indices + sl.start
+        t, arrays, sl = _pad_arrays(t, arrays, indices, span, period)
+        if len(t) == N:
+            # No padding needed! We'll carry-on with the algorithm here.
+            pass
+        else:
+            # arrays are padded. Recursively call windowed_sum() and return.
+            if span.ndim == 0 and indices is None:
+                # fixed-span/no index case is done faster this way
+                arrs = windowed_sum(arrays, span, t=t, indices=indices,
+                                    tpowers=tpowers, period=None,
+                                    subtract_mid=subtract_mid)
+                return tuple([a[sl] for a in arrs])
+            else:
+                # this works for variable span and general indices
+                if indices is None:
+                    indices = np.arange(N)
+                indices = indices + sl.start
+                return windowed_sum(arrays, span, t=t, indices=indices,
+                                    tpowers=tpowers, period=None,
+                                    subtract_mid=subtract_mid)
 
-            return windowed_sum(arrays, span, t=t, indices=indices,
-                                tpowers=tpowers, period=None,
-                                subtract_mid=subtract_mid)
-
+    # Now we should be safely in the non-periodic case.
     if span.ndim == 0:
         # fixed-span case
         window = np.ones(span)
         if period:
-            raise NotImplementedError('periodic fixed-span')
+            # This should have been taken care of above
+            raise ValueError("Something went terribly wrong...")
         else:
             def convolve_same(a, window):
-                res = np.convolve(a, window, mode='same')
-                if len(res) > len(a):
-                    res = res[(len(res) - len(a) + 1) // 2:][:len(a)]
+                if len(window) <= len(a):
+                    res = np.convolve(a, window, mode='same')
+                else:
+                    res = np.convolve(a, window, mode='full')
+                    start = (len(window) - 1) // 2
+                    res = res[start:start + len(a)]
                 return res
             results = [convolve_same(a * t ** tp, window)
                        for a, tp in zip(arrays, tpowers)]
@@ -211,7 +197,8 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
         if indices is None:
             indices = np.arange(len(span))
         if period:
-            raise NotImplementedError('periodic variable-span')
+            # This should have been taken care of above
+            raise ValueError("Something went terribly wrong...")
         else:
             mins = np.asarray(indices) - span // 2
             results = []
@@ -221,12 +208,42 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
                 results.append(np.add.reduceat(np.append(a * t ** tp, 0),
                                                ranges)[::2])
 
-
+    # Subtract the midpoint if required: this is used in cross-validation
     if subtract_mid:
         results = [r - a[indices] * t[indices] ** tp
                    for r, a, tp in zip(results, arrays, tpowers)]
 
     return tuple(results)
+
+
+def _pad_arrays(t, arrays, indices, span, period):
+    """Internal routine to pad arrays for periodic models."""
+    N = len(t)
+
+    if indices is None:
+        indices = np.arange(N)
+    pad_left = max(0, 0 - np.min(indices - span // 2))
+    pad_right = max(0, np.max(indices + span - span // 2) - (N - 1))
+
+    if pad_left + pad_right > 0:
+        Nright, pad_right = divmod(pad_right, N)
+        Nleft, pad_left = divmod(pad_left, N)
+        t = np.concatenate([t[N - pad_left:] - (Nleft + 1) * period]
+                           + [t + i * period
+                              for i in range(-Nleft, Nright + 1)]
+                           + [t[:pad_right] + (Nright + 1) * period])
+        arrays = [np.concatenate([a[N - pad_left:]]
+                                 + (Nleft + Nright + 1) * [a]
+                                 + [a[:pad_right]])
+                  for a in arrays]
+        pad_left = pad_left % N
+        Nright = pad_right / N
+        pad_right = pad_right % N
+
+        return (t, arrays, slice(pad_left + Nleft * N,
+                                 pad_left + (Nleft + 1) * N))
+    else:
+        return (t, arrays, slice(None))
 
 
 #----------------------------------------------------------------------
@@ -237,7 +254,7 @@ from nose import SkipTest
 
 
 def _fixed_span_sum(a, span, subtract_mid=False):
-    """Slow fixed-span sum"""
+    """fixed-span sum; used for testing windowed_span"""
     window = np.ones(span)
     if span <= len(a):
         res = np.convolve(a, window, mode='same')
@@ -250,127 +267,134 @@ def _fixed_span_sum(a, span, subtract_mid=False):
 
 
 def _variable_span_sum(a, span, subtract_mid=False):
-    """Slow variable-span sum, using multiple fixed-span sum runs"""
+    """variable-span sum, using multiple runs of _fixed_span_sum"""
     a, spans = np.broadcast_arrays(a, span)
     unique_spans, inv = np.unique(spans, return_inverse=True)
     results = [_fixed_span_sum(a, s, subtract_mid) for s in unique_spans]
     return np.asarray([results[j][i] for i, j in enumerate(inv)])
 
 
-def test_windowed_sum_slow_simple():
-    """Slow windowed sum in the simplest case"""
+def test_windowed_sum_simple():
+    #"""windowed sum in the simplest case"""
     rng = np.random.RandomState(0)
         
-    def check_results(N, span):
+    def check_results(wsum, N, span):
         a = rng.rand(N)
         assert_allclose([_fixed_span_sum(a, span),
                          _fixed_span_sum(a ** 2, span)],
-                        windowed_sum_slow([a, a ** 2], span))
+                        wsum([a, a ** 2], span))
 
-    for N in range(2, 6):
-        for span in range(1, 7):
-            yield check_results, N, span
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
 
 
-def test_windowed_sum_slow_with_t():
-    """Slow windowed sum with powers of t"""
+def test_windowed_sum_with_t():
+    #"""windowed sum with powers of t"""
     rng = np.random.RandomState(0)
         
-    def check_results(N, span):
+    def check_results(wsum, N, span):
         a = rng.rand(N)
         t = np.sort(rng.rand(N))
         assert_allclose([_fixed_span_sum(a, span),
                          _fixed_span_sum(a * t, span)],
-                        windowed_sum_slow([a, a], span, t=t, tpowers=[0, 1]))
+                        wsum([a, a], span, t=t, tpowers=[0, 1]))
 
-    for N in range(2, 6):
-        for span in range(1, 7):
-            yield check_results, N, span
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
 
 
-def test_windowed_sum_slow_varspan():
-    """Slow windowed sum with a variable span"""
+def test_windowed_sum_varspan():
+    #"""windowed sum with a variable span"""
     rng = np.random.RandomState(0)
         
-    def check_results(N):
+    def check_results(wsum, N):
         a = rng.rand(N)
         span = rng.randint(1, 5, N)
         assert_allclose([_variable_span_sum(a, span),
                          _variable_span_sum(a ** 2, span)],
-                        windowed_sum_slow([a, a ** 2], span))
+                        wsum([a, a ** 2], span))
 
-    for N in range(2, 6):
-        yield check_results, N
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            yield check_results, wsum, N
 
 
-def test_windowed_sum_slow_with_period():
-    """Slow windowed sum with period"""
+def test_windowed_sum_with_period():
+    #"""windowed sum with period"""
     rng = np.random.RandomState(0)
         
-    def check_results(N, span, tpowers, period=0.6):
+    def check_results(wsum, N, span, tpowers, period=0.6):
         a = rng.rand(N)
         t = np.sort(period * rng.rand(N))
 
+        # find the periodic result straightforwardly by concatenating arrays
         a_all = np.concatenate([a for i in range(6)])
         t_all = np.concatenate([t + i * period for i in range(-3, 3)])
 
-        res1 = windowed_sum_slow(len(tpowers) * [a_all], span, t=t_all,
-                                 tpowers=tpowers)
+        res1 = wsum(len(tpowers) * [a_all], span, t=t_all,
+                    tpowers=tpowers, period=None)
         res1 = [a[3 * N: 4 * N] for a in res1]
-        res2 = windowed_sum_slow(len(tpowers) * [a], span, t=t,
-                                 tpowers=tpowers, period=period)
+        res2 = wsum(len(tpowers) * [a], span, t=t,
+                    tpowers=tpowers, period=period)
         assert_allclose(res1, res2)
 
-    for N in range(4, 7):
-        for span in range(1, 7):
-            for tpowers in [(0, 1), (0, 1, 2)]:
-                yield check_results, N, span, tpowers
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(4, 7):
+            for span in range(1, 7):
+                for tpowers in [(0, 1), (0, 1, 2)]:
+                    yield check_results, wsum, N, span, tpowers
     
 
-def test_windowed_sum_slow_with_indices():
-    """Slow windowed sum with indices"""
+def test_windowed_sum_with_indices():
+    #"""windowed sum with indices"""
     rng = np.random.RandomState(0)
         
-    def check_results(N, span):
+    def check_results(wsum, N, span):
         ind = rng.randint(0, N, 4)
         a = rng.rand(N)
         t = np.sort(rng.rand(N))
 
-        res1 = windowed_sum_slow([a, a], span, t=t, tpowers=[0, 1])
+        res1 = wsum([a, a], span, t=t, tpowers=[0, 1])
         res1 = [a[ind] for a in res1]
-        res2 = windowed_sum_slow([a, a], span, t=t, tpowers=[0, 1],
+        res2 = wsum([a, a], span, t=t, tpowers=[0, 1],
                                  indices=ind)
         
         assert_allclose(res1, res2)
 
-    for N in range(4, 6):
-        for span in range(1, 7):
-            yield check_results, N, span
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(4, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
 
 
-def test_windowed_sum_slow_subtract_mid():
-    """Slow windowed sum, subtracting the middle item"""
+def test_windowed_sum_subtract_mid():
+    #"""windowed sum, subtracting the middle item"""
     rng = np.random.RandomState(0)
         
-    def check_results(N, span):
+    def check_results(wsum, N, span):
         a = rng.rand(N)
         t = np.sort(rng.rand(N))
         assert_allclose([_fixed_span_sum(a, span, subtract_mid=True),
                          _fixed_span_sum(a * t, span, subtract_mid=True)],
-                        windowed_sum_slow([a, a], span, t=t, tpowers=[0, 1],
-                                          subtract_mid=True))
+                        wsum([a, a], span, t=t, tpowers=[0, 1],
+                             subtract_mid=True))
 
-    for N in range(2, 6):
-        for span in range(1, 7):
-            yield check_results, N, span
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        for N in range(2, 6):
+            for span in range(1, 7):
+                yield check_results, wsum, N, span
 
 
-def test_windowed_sum_vs_slow():
+def test_windowed_sum_fast_vs_slow():
     #"""Test fast vs slow windowed sum for many combinations of parameters"""
     rng = np.random.RandomState(0)
         
     def check_results(N, span, indices, subtract_mid,
-                      tpowers, period):
+                      tpowers, period, use_t):
         a = rng.rand(N)
         t = np.sort(rng.rand(N))
         if period:
@@ -381,15 +405,14 @@ def test_windowed_sum_vs_slow():
         else:
             arrs = len(tpowers) * [a]
 
+        if not use_t:
+            t = None
+
         res1 = windowed_sum_slow(arrs, span, t=t, subtract_mid=subtract_mid,
                                  indices=indices, tpowers=tpowers,
                                  period=period)
-        try:
-            res2 = windowed_sum(arrs, span, t=t, subtract_mid=subtract_mid,
-                                indices=indices, tpowers=tpowers, period=period)
-        except NotImplementedError:
-            raise SkipTest("Not Implemented")
-
+        res2 = windowed_sum(arrs, span, t=t, subtract_mid=subtract_mid,
+                            indices=indices, tpowers=tpowers, period=period)
         assert_allclose(res1, res2)
 
     for N in [3, 5, 7]:
@@ -398,5 +421,8 @@ def test_windowed_sum_vs_slow():
                 for subtract_mid in [True, False]:
                     for tpowers in [0, (0, 1)]:
                         for period in (0.6, None):
-                            yield (check_results, N, span, indices,
-                                   subtract_mid, tpowers, period)
+                            for use_t in [True, False]:
+                                if period and not use_t:
+                                    continue
+                                yield (check_results, N, span, indices,
+                                       subtract_mid, tpowers, period, use_t)
