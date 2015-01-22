@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import division, absolute_import
 from .. import utils
 from ..utils import windowed_sum, windowed_sum_slow
 
@@ -173,7 +173,7 @@ def test_windowed_sum_with_period():
 
         res1 = wsum(len(tpowers) * [a_all], span, t=t_all,
                     tpowers=tpowers, period=None)
-        res1 = [a[3 * N: 4 * N] for a in res1]
+        res1 = [res[3 * N: 4 * N] for res in res1]
         res2 = wsum(len(tpowers) * [a], span, t=t,
                     tpowers=tpowers, period=period)
         assert_allclose(res1, res2)
@@ -195,7 +195,7 @@ def test_windowed_sum_with_indices():
         t = np.sort(rng.rand(N))
 
         res1 = wsum([a, a], span, t=t, tpowers=[0, 1])
-        res1 = [a[ind] for a in res1]
+        res1 = [res[ind] for res in res1]
         res2 = wsum([a, a], span, t=t, tpowers=[0, 1],
                                  indices=ind)
         
