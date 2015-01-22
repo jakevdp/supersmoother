@@ -96,7 +96,7 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
         Powers of t for each array sum
     period : float (optional)
         Period to use, if times are periodic. If supplied, input times
-        must be sorted according to t % period!
+        must be arranged such that (t % period) is sorted!
     subtract_mid : boolean
         If true, then subtract the middle value from each sum
 
@@ -141,19 +141,17 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
             result = [sum(array[j % N]
                           * (t[j % N] + (j // N) * period) ** tpower
                           for j in range(i - s // 2,
-                                         i - s // 2 + s))
+                                         i - s // 2 + s)
+                          if not (subtract_mid and j == 0))
                       for i, s in np.broadcast(indices, spans)]
         else:
             result = [sum(array[j]
                           * t[j] ** tpower
                           for j in range(max(0, i - s // 2),
-                                         min(N, i - s // 2 + s)))
+                                         min(N, i - s // 2 + s))
+                          if not (subtract_mid and j == 0))
                       for i, s in np.broadcast(indices, spans)]
         results.append(np.asarray(result))
-
-    if subtract_mid:
-        results = [r - a[indices] * t[indices] ** tp
-                   for r, a, tp in zip(results, arrays, tpowers)]
         
     return tuple(results)
 
@@ -179,7 +177,7 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
         Powers of t for each array sum
     period : float (optional)
         Period to use, if times are periodic. If supplied, input times
-        must be sorted according to t % period!
+        must be arranged such that (t % period) is sorted!
     subtract_mid : boolean
         If true, then subtract the middle value from each sum
 
@@ -212,21 +210,17 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
     if len(tpowers) != len(arrays):
         raise ValueError("tpowers must be broadcastable with number of arrays")
 
-    if period:
-        if t_input is None:
-            raise ValueError("periodic requires t to be provided")
-        t = t % period
-    
     if indices is not None:
         span, indices = np.broadcast_arrays(span, indices)
 
     # For the periodic case, re-call the function with padded arrays
     if period:
+        if t_input is None:
+            raise ValueError("periodic requires t to be provided")
+        t = t % period
+
         t, arrays, sl = _pad_arrays(t, arrays, indices, span, period)
-        if len(t) == N:
-            # No padding needed! We'll carry-on with the algorithm here.
-            pass
-        else:
+        if len(t) > N:
             # arrays are padded. Recursively call windowed_sum() and return.
             if span.ndim == 0 and indices is None:
                 # fixed-span/no index case is done faster this way
@@ -242,10 +236,14 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
                 return windowed_sum(arrays, span, t=t, indices=indices,
                                     tpowers=tpowers, period=None,
                                     subtract_mid=subtract_mid)
+        else:
+            # No padding needed! We can carry-on as if it's a non-periodic case
+            period = None
 
-    # Now we should be safely in the non-periodic case.
+    # The rest of the algorithm now proceeds without reference to the period:
     if span.ndim == 0:
-        # fixed-span case
+        # fixed-span case. Because of the checks above, we know
+        # here that indices=None
         window = np.ones(span)
         if period:
             # This should have been taken care of above
@@ -261,7 +259,7 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
                 return res
             results = [convolve_same(a * t ** tp, window)
                        for a, tp in zip(arrays, tpowers)]
-            indices = slice(None) # for below
+            indices = slice(None)
 
     else:
         # variable-span case
@@ -410,6 +408,8 @@ def linear_smooth(t, y, dy, span=None, cv=True,
     t_input = t
     prep = _prep_smooth(t, y, dy, span, t_out, span_out, period)
     t, y, dy, span, t_out, span_out, indices = prep
+    if period:
+        t_input = np.asarray(t_input) % period
 
     w = dy ** -2
     w, yw, tw, tyw, ttw = windowed_sum([w, y * w, w, y * w, w], t=t,
