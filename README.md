@@ -5,6 +5,7 @@ This is an efficient implementation of Friedman's SuperSmoother [1]
 algorithm in pure Python. It makes use of [numpy](http://numpy.org)
 for fast numerical computation.
 
+[![DOI](https://zenodo.org/badge/9372/jakevdp/supersmoother.svg)](http://dx.doi.org/10.5281/zenodo.14475)
 [![version status](https://pypip.in/v/supersmoother/badge.png)](https://pypi.python.org/pypi/supersmoother)
 [![downloads](https://pypip.in/d/supersmoother/badge.png)](https://pypi.python.org/pypi/supersmoother)
 [![build status](https://travis-ci.org/jakevdp/supersmoother.png?branch=master)](https://travis-ci.org/jakevdp/supersmoother)
