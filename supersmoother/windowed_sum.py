@@ -168,7 +168,7 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
 
     # The rest of the algorithm now proceeds without reference to the period
     # just as a sanity check...
-    assert period is None
+    assert not period
 
     if span.ndim == 0:
         # fixed-span case. Because of the checks & manipulations above

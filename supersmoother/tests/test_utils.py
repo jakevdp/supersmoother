@@ -281,6 +281,23 @@ def test_windowed_sum_bad_args(N=10):
                       span=5, tpowers=[0, 1, 2])
 
 
+def test_windowed_sum_period_zero(N=10):
+    """Regression test: make sure period=0 is handled correctly"""
+    #"""windowed sum with period"""
+    rng = np.random.RandomState(0)
+    a = rng.rand(N)
+    t = np.sort(0.6 * rng.rand(N))
+        
+    def check_results(wsum, span=3):
+        res1 = wsum(arrays=[a], span=3, tpowers=[0], period=None)
+        res2 = wsum(arrays=[a], span=3, tpowers=[0], period=0)
+
+        assert_allclose(res1, res2)
+
+    for wsum in [windowed_sum, windowed_sum_slow]:
+        check_results(wsum)
+
+
 def make_linear(N=100, err=1E-6, rseed=None):
     rng = np.random.RandomState(rseed)
     t = 10 * rng.rand(N)
