@@ -1,5 +1,9 @@
 # Package ``supersmoother`` Change Log
 
+## Version 0.3.1
+
+- Bug: assertion error was raised when period=0 was passed
+
 ## Version 0.3
 
 New Features:
