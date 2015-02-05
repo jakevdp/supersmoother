@@ -35,5 +35,16 @@ This code has full unit tests implemented in [nose](https://nose.readthedocs.org
 $ nosetests supersmoother
 ```
 
-[1]: Friedman, J. H. (1984) A variable span scatterplot smoother. Laboratory for Computational Statistics, Stanford University Technical Report No. 5. ([pdf](http://www.slac.stanford.edu/cgi-wrap/getdoc/slac-pub-3477.pdf))
+Authors
+-------
+``supersmoother`` was created by [Jake VanderPlas](http://vanderplas.com)
+
+Citing This Work
+----------------
+If you use this code in an academic publication, please consider including a citation to our work.
+Citation information in a variety of formats can be found [on zenodo](http://dx.doi.org/10.5281/zenodo.14475).
+
+References
+----------
+[1] Friedman, J. H. (1984) A variable span scatterplot smoother. Laboratory for Computational Statistics, Stanford University Technical Report No. 5. ([pdf](http://www.slac.stanford.edu/cgi-wrap/getdoc/slac-pub-3477.pdf))
 
