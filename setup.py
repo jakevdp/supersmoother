@@ -1,4 +1,5 @@
 from distutils.core import setup
+import re
 
 DESCRIPTION = "Python implementation of Friedman's Supersmoother"
 LONG_DESCRIPTION = """
@@ -19,11 +20,21 @@ URL = 'http://github.com/jakevdp/supersmoother'
 DOWNLOAD_URL = 'http://github.com/jakevdp/supersmoother'
 LICENSE = 'BSD 3-clause'
 
-import supersmoother
-VERSION = supersmoother.__version__
+
+def get_version():
+    """
+    Extracts the version number from the version.py file.
+    """
+    VERSION_FILE = 'supersmoother/__init__.py'
+    mo = re.search(r'^__version__ = [\'"]([^\'"]*)[\'"]', open(VERSION_FILE, 'rt').read(), re.M)
+    if mo:
+        return mo.group(1)
+    else:
+        raise RuntimeError('Unable to find version string in {0}.'.format(VERSION_FILE))
+
 
 setup(name=NAME,
-      version=VERSION,
+      version=get_version(),
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
       author=AUTHOR,
@@ -46,4 +57,5 @@ setup(name=NAME,
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4'],
+      extras_require={'with_requirements': ['numpy']},
      )

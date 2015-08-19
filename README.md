@@ -17,6 +17,10 @@ Installation is simple: To install the released version, type
 
     $ pip install supersmoother
 
+or, if you would like pip to install/update all dependencies (can sometimes cause problems)
+
+    $ pip install supersmoother[with_requirements]
+
 To install the bleeding-edge source, download the source code from http://github.com/jakevdp/supersmoother and type:
 
     $ python setup.py install
