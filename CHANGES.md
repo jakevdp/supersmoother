@@ -1,5 +1,9 @@
 # Package ``supersmoother`` Change Log
 
+## Version 0.3.2
+
+- Fix installation issue [PR#3](https://github.com/jakevdp/supersmoother/pull/3)
+
 ## Version 0.3.1
 
 - Bug: assertion error was raised when period=0 was passed
