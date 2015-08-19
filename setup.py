@@ -1,4 +1,28 @@
+import io
+import os
+import re
+
 from distutils.core import setup
+
+
+def read(path, encoding='utf-8'):
+    path = os.path.join(os.path.dirname(__file__), path)
+    with io.open(path, encoding=encoding) as fp:
+        return fp.read()
+
+
+def version(path):
+    """Obtain the packge version from a python file e.g. pkg/__init__.py
+
+    See <https://packaging.python.org/en/latest/single_source_version.html>.
+    """
+    version_file = read(path)
+    version_match = re.search(r"""^__version__ = ['"]([^'"]*)['"]""",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
 
 DESCRIPTION = "Python implementation of Friedman's Supersmoother"
 LONG_DESCRIPTION = """
@@ -19,8 +43,7 @@ URL = 'http://github.com/jakevdp/supersmoother'
 DOWNLOAD_URL = 'http://github.com/jakevdp/supersmoother'
 LICENSE = 'BSD 3-clause'
 
-import supersmoother
-VERSION = supersmoother.__version__
+VERSION = version('supersmoother/__init__.py')
 
 setup(name=NAME,
       version=VERSION,
