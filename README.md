@@ -35,6 +35,7 @@ This code has full unit tests implemented in [nose](https://nose.readthedocs.org
 ```
 $ nosetests supersmoother
 ```
+The package is tested with Python versions 2.6, 2.7, 3.3, 3.4, and 3.5.
 
 Authors
 -------
