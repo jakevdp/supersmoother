@@ -213,3 +213,12 @@ def test_baseclass():
     assert_raises(NotImplementedError, d.fit, [1, 2, 3], [1, 1, 1])
     assert_raises(NotImplementedError, d.predict, [1, 2, 3])
     assert_raises(NotImplementedError, d.cv_values)
+
+
+def test_duplicate_inputs():
+    rng = np.random.RandomState(0)
+    x = np.arange(100)
+    x[:10] = 10
+    y = rng.rand(100)
+    sm = LinearSmoother(span=0.1).fit(x, y)
+    assert_raises(ValueError, sm.predict, x)

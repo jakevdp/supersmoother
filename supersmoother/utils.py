@@ -179,6 +179,10 @@ def linear_smooth(t, y, dy, span=None, cv=True,
     slope = (tyw * w - tw * yw)
     intercept = (ttw * yw - tyw * tw)
 
+    #if np.any(denominator == 0):
+    #    raise ValueError("Zero denominator in linear smooth. This usually "
+    #                     "indicates that the input contains duplicate points.")
+
     if t_out is None:
         return (slope * t_input + intercept) / denominator
     elif span_out is not None:
