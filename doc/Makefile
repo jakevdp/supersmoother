@@ -87,9 +87,9 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/gatspy.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/supersmoother.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/gatspy.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/supersmoother.qhc"
 
 applehelp:
 	$(SPHINXBUILD) -b applehelp $(ALLSPHINXOPTS) $(BUILDDIR)/applehelp
@@ -104,8 +104,8 @@ devhelp:
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/gatspy"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/gatspy"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/supersmoother"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/supersmoother"
 	@echo "# devhelp"
 
 epub:
@@ -193,12 +193,12 @@ pseudoxml:
 
 
 publish: html
-	if test -d _build/gatspy; \
-	then echo "using existing cloned gatspy directory"; \
+	if test -d _build/supersmoother; \
+	then echo "using existing cloned supersmoother directory"; \
 	else cd _build && \
-	git clone git@github.com:astroML/gatspy; \
+	git clone git@github.com:jakevdp/supersmoother; \
 	fi && \
-	cd _build/gatspy && git checkout gh-pages && \
+	cd _build/supersmoother && git checkout gh-pages && \
 	rsync -r ../html/* ./ && \
 	git add * && \
 	git commit -a -m 'Make install' && \
