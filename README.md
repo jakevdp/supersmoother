@@ -35,7 +35,7 @@ This code has full unit tests implemented in [nose](https://nose.readthedocs.org
 ```
 $ nosetests supersmoother
 ```
-The package is tested with Python versions 2.6, 2.7, 3.3, 3.4, and 3.5.
+The package is tested with Python versions 2.7, 3.4, and 3.5.
 
 Authors
 -------
@@ -49,4 +49,3 @@ Citation information in a variety of formats can be found [on zenodo](http://dx.
 References
 ----------
 [1] Friedman, J. H. (1984) A variable span scatterplot smoother. Laboratory for Computational Statistics, Stanford University Technical Report No. 5. ([pdf](http://www.slac.stanford.edu/cgi-wrap/getdoc/slac-pub-3477.pdf))
-
