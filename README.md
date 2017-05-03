@@ -7,7 +7,6 @@ for fast numerical computation.
 
 [![DOI](https://zenodo.org/badge/9372/jakevdp/supersmoother.svg)](http://dx.doi.org/10.5281/zenodo.14475)
 [![version status](http://img.shields.io/pypi/v/supersmoother.svg?style=flat)](https://pypi.python.org/pypi/supersmoother)
-[![downloads](http://img.shields.io/pypi/dm/supersmoother.svg?style=flat)](https://pypi.python.org/pypi/supersmoother)
 [![build status](http://img.shields.io/travis/jakevdp/supersmoother/master.svg?style=flat)](https://travis-ci.org/jakevdp/supersmoother)
 [![license](http://img.shields.io/badge/license-BSD-blue.svg?style=flat)](https://github.com/jakevdp/supersmoother/blob/master/LICENSE)
 
