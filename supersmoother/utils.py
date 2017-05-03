@@ -127,7 +127,7 @@ def moving_average_smooth(t, y, dy, span=None, cv=True,
     prep = _prep_smooth(t, y, dy, span, t_out, span_out, period)
     t, y, dy, span, t_out, span_out, indices = prep
 
-    w = dy ** -2
+    w = 1. / (dy ** 2)
     w, yw = windowed_sum([w, y * w], t=t, span=span, subtract_mid=cv,
                          indices=indices, period=period)
 
@@ -169,7 +169,7 @@ def linear_smooth(t, y, dy, span=None, cv=True,
     if period:
         t_input = np.asarray(t_input) % period
 
-    w = dy ** -2
+    w = 1. / (dy ** 2)
     w, yw, tw, tyw, ttw = windowed_sum([w, y * w, w, y * w, w], t=t,
                                        tpowers=[0, 0, 1, 1, 2],
                                        span=span, indices=indices,

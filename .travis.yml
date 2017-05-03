@@ -7,10 +7,11 @@ python:
   - 2.7
   - 3.4
   - 3.5
+  - 3.6
 
 env:
   global:
-    - TEST_DIR=/tmp/megaman
+    - TEST_DIR=/tmp/supersmoother/
     - CONDA_DEPS="numpy scipy nose coverage"
 
 before_install:
