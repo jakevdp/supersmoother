@@ -1,5 +1,9 @@
 # Package ``supersmoother`` Change Log
 
+## Version 0.4
+
+- Ensure compatibility with Python 3.6 and Numpy 1.12
+
 ## Version 0.3.2
 
 - Fix installation issue [PR#3](https://github.com/jakevdp/supersmoother/pull/3)
