@@ -2,7 +2,7 @@ import io
 import os
 import re
 
-from distutils.core import setup
+from setuptools import setup
 
 
 def read(path, encoding='utf-8'):
