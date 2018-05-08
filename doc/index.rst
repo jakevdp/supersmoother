@@ -11,7 +11,7 @@ written in pure Python. It makes use of NumPy for fast numerical computations.
 
 This package was created by `Jake VanderPlas <http://www.vanderplas.com/>`_.
 If you use this package for a publication, please consider citing
-`the code <http://dx.doi.org/10.5281/zenodo.14475>`_.
+`the code <https://doi.org/10.5281/zenodo.14475>`_.
 
 For issues & contributions, see the source repository
 `on github <http://github.com/jakevdp/supersmoother/>`_.
