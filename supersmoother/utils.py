@@ -105,7 +105,10 @@ def _prep_smooth(
     elif span is None:
         raise ValueError("Must specify either span_out or span")
     else:
-        indices = None
+        indices = np.arange(len(t))
+
+    if not period:
+        indices = np.clip(indices, span // 2, len(t) - span // 2)
 
     assert span is not None
 
