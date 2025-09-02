@@ -30,9 +30,9 @@ You can see these in the ``examples/`` directory, or view them statically
 
 Testing
 -------
-This code has full unit tests implemented in [nose](https://nose.readthedocs.org/en/latest/). With ``nose`` installed, you can run the test suite using
+This code has full unit tests implemented in [pytest](https://pytest.org). With ``pytest`` installed, you can run the test suite using
 ```
-$ nosetests supersmoother
+$ pytest
 ```
 The package is tested with Python versions 2.7, 3.4, 3.5, and 3.6.
 
