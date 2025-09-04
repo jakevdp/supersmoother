@@ -1,0 +1,22 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # v6.0.0
+  hooks:
+  - id: check-ast
+  - id: check-merge-conflict
+  - id: check-toml
+  - id: check-yaml
+  - id: end-of-file-fixer
+    # only include python files
+    files: \.py$
+  - id: debug-statements
+    # only include python files
+    files: \.py$
+  - id: trailing-whitespace
+    # only include python files
+    files: \.py$
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: 54a455f7ce629598b7535ff828fd5fb796f4b83f  # frozen: v0.12.9
+  hooks:
+  - id: ruff

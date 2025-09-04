@@ -40,7 +40,7 @@ def test_setattr_context():
     try:
         with utils.setattr_context(f, attr="123"):
             raise ValueError()
-    except:
+    except ValueError:
         pass
     assert_equal(f.attr, "abc")
 
@@ -267,9 +267,8 @@ def test_windowed_sum_period_zero(N=10):
     #"""windowed sum with period"""
     rng = np.random.RandomState(0)
     a = rng.rand(N)
-    t = np.sort(0.6 * rng.rand(N))
 
-    def check_results(wsum, span=3):
+    def check_results(wsum):
         res1 = wsum(arrays=[a], span=3, tpowers=[0], period=None)
         res2 = wsum(arrays=[a], span=3, tpowers=[0], period=0)
 
@@ -306,7 +305,7 @@ def test_constant_data(N=100, rseed=0):
     span = 5
 
     for method in [utils.moving_average_smooth, utils.linear_smooth]:
-        yfit = method(t, y, dy, span=5)
+        yfit = method(t, y, dy, span=span)
         assert_allclose(y, yfit)
 
 
@@ -318,7 +317,7 @@ def test_equal_spaced_linear_data(N=100, rseed=0):
     span = 5
 
     for method in [utils.moving_average_smooth, utils.linear_smooth]:
-        yfit = method(t, y, dy, span=5)
+        yfit = method(t, y, dy, span=span)
         assert_allclose(y[3:-3], yfit[3:-3])
 
 
@@ -330,7 +329,7 @@ def test_random_linear_data(N=100, rseed=0):
     dy = 1.0
     span = 5
 
-    yfit = utils.linear_smooth(t, y, dy, span=5)
+    yfit = utils.linear_smooth(t, y, dy, span=span)
     assert_allclose(y, yfit)
 
 
@@ -343,8 +342,8 @@ def test_t_vs_t_out(N=100, rseed=0):
     span = 5
 
     for method in [utils.linear_smooth, utils.moving_average_smooth]:
-        yfit1 = method(t, y, dy, span=5, cv=False)
-        yfit2 = method(t, y, dy, span_out=5, t_out=t, cv=False)
+        yfit1 = method(t, y, dy, span=span, cv=False)
+        yfit2 = method(t, y, dy, span_out=span, t_out=t, cv=False)
         assert_allclose(yfit1, yfit2)
 
 

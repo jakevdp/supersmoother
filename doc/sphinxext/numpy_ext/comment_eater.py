@@ -166,4 +166,3 @@ def get_class_traits(klass):
             rhs = unparse(node.expr).strip()
             doc = strip_comment_marker(cb.search_for_comment(node.lineno, default=''))
             yield name, rhs, doc
-
