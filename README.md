@@ -8,7 +8,7 @@ for fast numerical computation.
 [![DOI](https://zenodo.org/badge/9372/jakevdp/supersmoother.svg)](http://dx.doi.org/10.5281/zenodo.14475)
 [![version status](http://img.shields.io/pypi/v/supersmoother.svg?style=flat)](https://pypi.python.org/pypi/supersmoother)
 [![build status](https://github.com/jakevdp/supersmoother/actions/workflows/test.yml/badge.svg)](https://github.com/jakevdp/supersmoother/actions/workflows/test.yml)
-[![license](http://img.shields.io/badge/license-BSD-blue.svg?style=flat)](https://github.com/jakevdp/supersmoother/blob/master/LICENSE)
+[![license](http://img.shields.io/badge/license-BSD-blue.svg?style=flat)](https://github.com/jakevdp/supersmoother/blob/main/LICENSE)
 
 Installation
 ------------
@@ -26,7 +26,7 @@ Example
 -------
 The package includes several example notebooks showing the code in action.
 You can see these in the ``examples/`` directory, or view them statically
-[on nbviewer](http://nbviewer.ipython.org/github/jakevdp/supersmoother/blob/master/examples/Index.ipynb)
+[on nbviewer](http://nbviewer.ipython.org/github/jakevdp/supersmoother/blob/main/examples/Index.ipynb)
 
 Testing
 -------
