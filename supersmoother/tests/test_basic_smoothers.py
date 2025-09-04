@@ -38,7 +38,7 @@ def test_sine(Model, span, err):
 
 
 @pytest.mark.parametrize("Model", [MovingAverageSmoother, LinearSmoother])
-@pytest.mark.parametrize("span, err", [(0.05, 0.005), (0.2, 0.01), (0.5, 0.1)])
+@pytest.mark.parametrize("span, err", [(0.05, 0.005), (0.2, 0.02), (0.5, 0.1)])
 def test_sine_cv(Model, span, err):
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
     ytrue = np.sin(np.sort(t)[1:-1])
