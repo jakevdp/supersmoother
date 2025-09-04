@@ -41,7 +41,6 @@ MAINTAINER = "Jake VanderPlas"
 MAINTAINER_EMAIL = "jakevdp@uw.edu"
 URL = 'http://github.com/jakevdp/supersmoother'
 DOWNLOAD_URL = 'http://github.com/jakevdp/supersmoother'
-LICENSE = 'BSD 3-clause'
 
 VERSION = version('supersmoother/__init__.py')
 
@@ -55,7 +54,6 @@ setup(name=NAME,
       maintainer_email=MAINTAINER_EMAIL,
       url=URL,
       download_url=DOWNLOAD_URL,
-      license=LICENSE,
       install_requires=["numpy"],
       tests_require=["scipy"],
       packages=['supersmoother',
@@ -65,10 +63,8 @@ setup(name=NAME,
         'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6'],
+        'Programming Language :: Python :: 3',
+      ],
      )
