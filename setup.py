@@ -56,6 +56,13 @@ setup(name=NAME,
       download_url=DOWNLOAD_URL,
       install_requires=["numpy"],
       tests_require=["scipy"],
+      extras_require={
+          "dev": [
+              "pytest",
+              "pytest-xdist",
+              "scipy"
+          ]
+      },
       packages=['supersmoother',
                 'supersmoother.tests',
             ],
