@@ -1,6 +1,9 @@
 from contextlib import contextmanager
+from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike
+
 from .windowed_sum import (
     windowed_sum as windowed_sum,
     windowed_sum_slow as windowed_sum_slow,
@@ -8,7 +11,7 @@ from .windowed_sum import (
 
 
 @contextmanager
-def setattr_context(obj, **kwargs):
+def setattr_context(obj: Any, **kwargs):
     """
     Context manager to temporarily change the values of object attributes
     while executing a function.
@@ -24,14 +27,16 @@ def setattr_context(obj, **kwargs):
     hello
     """
     old_kwargs = dict([(key, getattr(obj, key)) for key in kwargs])
-    [setattr(obj, key, val) for key, val in kwargs.items()]
+    for key, val in kwargs.items():
+        setattr(obj, key, val)
     try:
         yield
     finally:
-        [setattr(obj, key, val) for key, val in old_kwargs.items()]
+        for key, val in old_kwargs.items():
+            setattr(obj, key, val)
 
 
-def iterable(obj):
+def iterable(obj: Any) -> bool:
     """Utility to check if object is iterable"""
     try:
         iter(obj)
@@ -41,7 +46,7 @@ def iterable(obj):
         return True
 
 
-def validate_inputs(*arrays, **kwargs):
+def validate_inputs(*arrays: ArrayLike, **kwargs: Any) -> tuple[np.ndarray, ...]:
     """Validate input arrays
 
     This checks that
@@ -74,14 +79,19 @@ def validate_inputs(*arrays, **kwargs):
     return arrays
 
 
-def _prep_smooth(t, y, dy, span, t_out, span_out, period):
+def _prep_smooth(
+        t: ArrayLike, y: ArrayLike, dy: ArrayLike,
+        span: ArrayLike | None, t_out: ArrayLike | None,
+        span_out: ArrayLike | None, period: float | None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray,
+           ArrayLike, ArrayLike | None,
+           ArrayLike | None, np.ndarray | None]:
     """Private function to prepare & check variables for smooth utilities"""
-
     # If period is provided, sort by phases. Otherwise sort by t
     if period:
-        t = t % period
+        t = np.asarray(t) % period
         if t_out is not None:
-            t_out = t_out % period
+            t_out = np.asarray(t_out) % period
 
     t, y, dy = validate_inputs(t, y, dy, sort_by=t)
 
@@ -97,11 +107,16 @@ def _prep_smooth(t, y, dy, span, t_out, span_out, period):
     else:
         indices = None
 
+    assert span is not None
+
     return t, y, dy, span, t_out, span_out, indices
 
 
-def moving_average_smooth(t, y, dy, span=None, cv=True,
-                          t_out=None, span_out=None, period=None):
+def moving_average_smooth(t: ArrayLike, y: ArrayLike, dy: ArrayLike,
+                          span: ArrayLike | None = None, cv: bool = True,
+                          t_out: ArrayLike | None = None,
+                          span_out: ArrayLike | None = None,
+                          period: float | None = None) -> np.ndarray:
     """Perform a moving-average smooth of the data
 
     Parameters
@@ -139,8 +154,10 @@ def moving_average_smooth(t, y, dy, span=None, cv=True,
         return yw[i] / w[i]
 
 
-def linear_smooth(t, y, dy, span=None, cv=True,
-                  t_out=None, span_out=None, period=None):
+def linear_smooth(t: ArrayLike, y: ArrayLike, dy: ArrayLike,
+                  span: ArrayLike | None = None, cv: bool = True,
+                  t_out: ArrayLike | None = None, span_out: ArrayLike | None = None,
+                  period: float | None = None) -> np.ndarray:
     """Perform a linear smooth of the data
 
     Parameters
@@ -193,7 +210,7 @@ def linear_smooth(t, y, dy, span=None, cv=True,
         return (slope[i] * t_out + intercept[i]) / denominator[i]
 
 
-def multinterp(x, y, xquery, slow=False):
+def multinterp(x: ArrayLike, y: ArrayLike, xquery: ArrayLike, slow: bool = False) -> np.ndarray:
     """Multiple linear interpolations
 
     Parameters

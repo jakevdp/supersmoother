@@ -1,15 +1,21 @@
+from __future__ import annotations
+
+from typing import Callable
+
 import numpy as np
+from numpy.typing import ArrayLike
 from .utils import linear_smooth, moving_average_smooth, iterable
 
 __all__ = ['MovingAverageSmoother', 'LinearSmoother']
 
 
-class Smoother(object):
+class Smoother:
     """Base Class for Smoothers"""
     def __init__(self):
         raise NotImplementedError()
 
-    def fit(self, t, y, dy=1, presorted=False):
+    def fit(self, t: ArrayLike, y: ArrayLike, dy: ArrayLike = 1,
+            presorted: bool = False) -> Smoother:
         """Fit the smoother
 
         Parameters
@@ -31,7 +37,7 @@ class Smoother(object):
         self._fit(self.t, self.y, self.dy)
         return self
 
-    def predict(self, t):
+    def predict(self, t: ArrayLike) -> np.ndarray:
         """Predict the smoothed function value at time t
 
         Parameters
@@ -47,68 +53,78 @@ class Smoother(object):
         t = np.asarray(t)
         return self._predict(np.ravel(t)).reshape(t.shape)
 
-    def cv_values(self, cv=True):
+    def cv_values(self, cv: bool = True) -> np.ndarray:
         """Return the values of the cross-validation for the fit data"""
         return self._cv_values(cv)
 
-    def cv_residuals(self, cv=True):
+    def cv_residuals(self, cv: bool = True) -> np.ndarray:
         """Return the residuals of the cross-validation for the fit data"""
         vals = self.cv_values(cv)
         return (self.y - vals) / self.dy
 
-    def cv_error(self, cv=True, skip_endpoints=True):
+    def cv_error(self, cv: bool = True, skip_endpoints: bool = True) -> np.ndarray:
         """Return the sum of cross-validation residuals for the input data"""
         resids = self.cv_residuals(cv)
         if skip_endpoints:
             resids = resids[1:-1]
         return np.mean(abs(resids))
 
-    def _validate_inputs(self, t, y, dy, presorted=False):
+    def _validate_inputs(self, t: ArrayLike, y: ArrayLike, dy: ArrayLike,
+                         presorted: bool = False) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         t, y, dy = np.broadcast_arrays(t, y, dy)
         if presorted:
-            self.isort = slice(None)
+            self.isort: slice | np.ndarray = slice(None)
         elif hasattr(self, 'period') and self.period:
             self.isort = np.argsort(t % self.period)
         else:
             self.isort = np.argsort(t)
         return t[self.isort], y[self.isort], dy[self.isort]
 
-    def _fit(self, t, y, dy):
+    def _fit(self, t: np.ndarray, y: np.ndarray, dy: np.ndarray) -> None:
         """Private function to perform fit() on input data"""
         raise NotImplementedError()
 
-    def _predict(self, t):
+    def _predict(self, t: ArrayLike) -> np.ndarray:
         """Private function implementing prediction for new data"""
         raise NotImplementedError()
 
-    def _cv_values(self, cv=True):
+    def _cv_values(self, cv: bool = True) -> np.ndarray:
         """Private function implementing cross-validation on fit data"""
         raise NotImplementedError()
 
 
 class SpannedSmoother(Smoother):
     """Base class for smoothers based on local spans of sorted data"""
-    def __init__(self, span, period=None):
+    def __init__(self, span: ArrayLike | Callable[[np.ndarray], np.ndarray],
+                 period: float | None = None):
         self.span = span
         self.period = period
 
-    def _fit(self, t, y, dy):
+    @staticmethod
+    def _smoothfunc(t: ArrayLike, y: ArrayLike, dy: ArrayLike,
+                    span: ArrayLike | None = None, cv: bool = True,
+                    t_out: ArrayLike | None = None,
+                    span_out: ArrayLike | None = None,
+                    period: float | None = None) -> np.ndarray:
+        raise NotImplementedError()
+
+    def _fit(self, t: np.ndarray, y: np.ndarray, dy: np.ndarray) -> None:
         pass
 
-    def span_int(self, t=None):
+    def span_int(self, t: ArrayLike | None = None) -> np.ndarray:
         if t is None:
             t = self.t
 
         if callable(self.span):
-            spanint = self.span(t) * len(self.t)
+            spanint = self.span(t) * len(self.t)  # type: ignore[arg-type]
         elif iterable(self.span):
-            spanint = self.span[self.isort] * len(self.t)
+            spanint = np.asarray(self.span)[self.isort] * len(self.t)
         else:
-            spanint = self.span * len(self.t)
+            spanint = np.asarray(self.span) * len(self.t)
 
         return np.clip(spanint, 3, None)
 
-    def _predict(self, t):
+    def _predict(self, t: ArrayLike) -> np.ndarray:
         if callable(self.span):
             return self._smoothfunc(self.t, self.y, self.dy, cv=False,
                                     span_out=self.span_int(t), t_out=t,
@@ -118,7 +134,7 @@ class SpannedSmoother(Smoother):
                                     span=self.span_int(), t_out=t,
                                     period=self.period)
 
-    def _cv_values(self, cv=True):
+    def _cv_values(self, cv: bool = True) -> np.ndarray:
         return self._smoothfunc(self.t, self.y, self.dy, cv=cv,
                                 span=self.span_int(), period=self.period)
 

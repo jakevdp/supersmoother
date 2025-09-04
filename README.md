@@ -36,7 +36,7 @@ They can be run as follows from the source directory:
 $ pip install .[dev]
 $ pytest -n auto supersmoother
 ```
-The package is tested with Python versions 3.9 through 3.14.
+The package is tested with Python versions 3.10 through 3.14.
 
 ## Authors
 ``supersmoother`` was created by [Jake VanderPlas](http://vanderplas.com)

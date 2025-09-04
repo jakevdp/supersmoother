@@ -1,8 +1,16 @@
+from collections.abc import Sequence
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 
-def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
-                      period=None, subtract_mid=False):
+def windowed_sum_slow(arrays: Sequence[ArrayLike],
+                      span: ArrayLike,
+                      t: np.ndarray | None = None,
+                      indices: ArrayLike | None = None,
+                      tpowers: int | list[int] | np.ndarray = 0,
+                      period: float | None = None,
+                      subtract_mid: bool = False) -> tuple[np.ndarray, ...]:
     """Compute the windowed sum of the given arrays.
 
     This is a slow function, used primarily for testing and validation
@@ -84,8 +92,13 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
     return tuple(results)
 
 
-def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
-                 period=None, subtract_mid=False):
+def windowed_sum(arrays: Sequence[ArrayLike],
+                 span: ArrayLike,
+                 t: np.ndarray | None = None,
+                 indices: ArrayLike | None = None,
+                 tpowers: int | list[int] | np.ndarray = 0,
+                 period: float | None = None,
+                 subtract_mid: bool = False) -> tuple[np.ndarray, ...]:
     """Compute the windowed sum of the given arrays.
 
     Parameters
@@ -170,6 +183,8 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
     # just as a sanity check...
     assert not period
 
+    idx: slice | np.ndarray
+
     if span.ndim == 0:
         # fixed-span case. Because of the checks & manipulations above
         # we know here that indices=None
@@ -186,17 +201,16 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
             return res
         results = [convolve_same(a * t ** tp, window)
                    for a, tp in zip(arrays, tpowers)]
-        indices = slice(None)
+        idx = slice(None)
 
     else:
         # variable-span case. Use reduceat() in a clever way for speed.
-        if indices is None:
-            indices = np.arange(len(span))
+        idx = np.arange(len(span)) if indices is None else np.asarray(indices)
 
         # we checked this above, but just as a sanity check assert it here...
-        assert span.shape == indices.shape
+        assert span.shape == idx.shape
 
-        mins = np.asarray(indices) - span // 2
+        mins = np.asarray(idx) - span // 2
         results = []
         for a, tp in zip(arrays, tpowers):
             ranges = np.vstack([np.maximum(0, mins),
@@ -206,13 +220,16 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
 
     # Subtract the midpoint if required: this is used in cross-validation
     if subtract_mid:
-        results = [r - a[indices] * t[indices] ** tp
+        results = [r - a[idx] * t[idx] ** tp
                    for r, a, tp in zip(results, arrays, tpowers)]
 
     return tuple(results)
 
 
-def _pad_arrays(t, arrays, indices, span, period):
+def _pad_arrays(t: np.ndarray, arrays: tuple[np.ndarray, ...],
+                indices: np.ndarray | None,
+                span: np.ndarray, period: float
+) -> tuple[np.ndarray, tuple[np.ndarray, ...], slice]:
     """Internal routine to pad arrays for periodic models."""
     N = len(t)
 
@@ -228,10 +245,10 @@ def _pad_arrays(t, arrays, indices, span, period):
                            + [t + i * period
                               for i in range(-Nleft, Nright + 1)]
                            + [t[:pad_right] + (Nright + 1) * period])
-        arrays = [np.concatenate([a[N - pad_left:]]
-                                 + (Nleft + Nright + 1) * [a]
-                                 + [a[:pad_right]])
-                  for a in arrays]
+        arrays = tuple(np.concatenate([a[N - pad_left:]]
+                                      + (Nleft + Nright + 1) * [a]
+                                      + [a[:pad_right]])
+                       for a in arrays)
         pad_left = pad_left % N
         Nright = pad_right / N
         pad_right = pad_right % N

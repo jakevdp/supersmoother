@@ -3,7 +3,7 @@ name = "supersmoother"
 dynamic = ["version"]
 description = "Python implementation of Friedman's Supersmoother"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
 authors = [{name = "Jake VanderPlas"}]
@@ -38,3 +38,6 @@ exclude = [
     "doc/sphinxext/*",
 ]
 
+[tool.mypy]
+no_implicit_optional = true
+allow_redefinition = true

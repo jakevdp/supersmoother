@@ -29,7 +29,7 @@ def test_multiinterp(k, rseed=0, N=100):
 
 def test_setattr_context():
     """Test of the setattr_context() function"""
-    class Foo(object):
+    class Foo:
         pass
     f = Foo()
     f.attr = "abc"
