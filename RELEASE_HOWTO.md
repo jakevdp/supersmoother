@@ -4,34 +4,30 @@ Here's a quick step-by-step for cutting a new release of supersmoother.
 
 ## Pre-release
 
-1. update version in ``supersmoother.__init__.py``
+1. update version in `supersmoother/__init__.py`
 
-2. update version in ``docs/conf.py`` (two places!)
-
-3. create a release tag; e.g.
+2. create a release tag; e.g.
    ```
-   $ git tag -a v0.2 -m 'version 0.2 release'
+   $ git tag -a v0.5.0 -m 'version 0.5.0 release'
    ```
 
-4. push the commits and tag to github
+3. push the commits and tag to github
 
-5. confirm that CI tests pass on github
+4. confirm that CI tests pass on github
 
-6. under "tags" on github, update the release notes
+5. under "tags" on github, update the release notes
 
-7. push the new release to PyPI:
+6. build the release and push to PyPI:
    ```
-   $ python setup.py sdist upload
+   $ pip install build twine
+   $ rm -r dist
+   $ python -m build
+   $ ls dist/  # double check that the version is correct
+   supersmoother-0.5.0-py3-none-any.whl	supersmoother-0.5.0.tar.gz
+   $ twine upload dist/*
    ```
-
-8. change directories to ``doc`` and build the documentation:
-   ```
-   $ cd doc/
-   $ make html     # build documentation
-   $ make publish  # publish to github pages
 
 ## Post-release
 
-1. update version in ``supersmoother.__version__`` to next version; e.g. '0.3.dev'
-
-2. update version in ``doc/conf.py`` to the same (in two places)
+update version in `supersmoother/__init__.py` to next development version;
+e.g. '0.6.0.dev0'
