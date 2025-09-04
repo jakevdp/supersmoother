@@ -1,4 +1,3 @@
-from __future__ import division, absolute_import
 from .. import utils
 from ..utils import windowed_sum, windowed_sum_slow
 
