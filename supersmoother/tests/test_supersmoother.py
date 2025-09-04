@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less, assert_equal
+from numpy.testing import assert_allclose, assert_array_less
 import pytest
 
 from .. import SuperSmoother, LinearSmoother

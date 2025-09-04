@@ -37,12 +37,12 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
     span = np.asarray(span, dtype=int)
     if not np.all(span > 0):
         raise ValueError("span values must be positive")
-    
+
     arrays = tuple(map(np.asarray, arrays))
     N = arrays[0].size
     if not all(a.shape == (N,) for a in arrays):
         raise ValueError("sizes of provided arrays must match")
-    
+
     t_input = t
     if t is not None:
         t = np.asarray(t)
@@ -50,7 +50,7 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
             raise ValueError("shape of t must match shape of arrays")
     else:
         t = np.ones(N)
-    
+
     tpowers = tpowers + np.zeros(len(arrays))
     if len(tpowers) != len(arrays):
         raise ValueError("tpowers must be broadcastable with number of arrays")
@@ -59,11 +59,11 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
         if t_input is None:
             raise ValueError("periodic requires t to be provided")
         t = t % period
-    
+
     if indices is None:
         indices = np.arange(N)
     spans, indices = np.broadcast_arrays(span, indices)
-    
+
     results = []
     for tpower, array in zip(tpowers, arrays):
         if period:
@@ -80,7 +80,7 @@ def windowed_sum_slow(arrays, span, t=None, indices=None, tpowers=0,
                           if not (subtract_mid and j == i))
                       for i, s in np.broadcast(indices, spans)]
         results.append(np.asarray(result))
-        
+
     return tuple(results)
 
 
@@ -117,12 +117,12 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
     span = np.asarray(span, dtype=int)
     if not np.all(span > 0):
         raise ValueError("span values must be positive")
-    
+
     arrays = tuple(map(np.asarray, arrays))
     N = arrays[0].size
     if not all(a.shape == (N,) for a in arrays):
         raise ValueError("sizes of provided arrays must match")
-    
+
     t_input = t
     if t is not None:
         t = np.asarray(t)
@@ -133,7 +133,7 @@ def windowed_sum(arrays, span, t=None, indices=None, tpowers=0,
     else:
         # XXX: special-case no t?
         t = np.ones(N)
-    
+
     tpowers = np.asarray(tpowers) + np.zeros(len(arrays))
 
     if indices is not None:

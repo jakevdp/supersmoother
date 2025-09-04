@@ -1,7 +1,10 @@
 from contextlib import contextmanager
 
 import numpy as np
-from .windowed_sum import windowed_sum, windowed_sum_slow
+from .windowed_sum import (
+    windowed_sum as windowed_sum,
+    windowed_sum_slow as windowed_sum_slow,
+)
 
 
 @contextmanager
@@ -32,7 +35,7 @@ def iterable(obj):
     """Utility to check if object is iterable"""
     try:
         iter(obj)
-    except:
+    except TypeError:
         return False
     else:
         return True
@@ -231,5 +234,3 @@ def multinterp(x, y, xquery, slow=False):
         j = np.arange(len(xquery))
         return y[i, j] + ((xquery - x[i]) *
                           (y[i + 1, j] - y[i, j]) / (x[i + 1] - x[i]))
-
-

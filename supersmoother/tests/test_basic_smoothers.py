@@ -1,6 +1,5 @@
 import numpy as np
-from numpy.testing import (assert_allclose, assert_array_less,
-                           assert_equal, assert_raises)
+from numpy.testing import assert_allclose, assert_array_less, assert_raises
 import pytest
 
 from .. import MovingAverageSmoother, LinearSmoother
@@ -63,7 +62,6 @@ def test_variable_sine_predict(Model, span):
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
     tfit = np.linspace(1, 5.3, 50)
-    ytrue = np.sin(tfit)
 
     model1 = Model(span * np.ones_like(t))
     model2 = Model(span)
@@ -76,9 +74,6 @@ def test_variable_sine_predict(Model, span):
 def test_variable_sine_crossval(Model, span):
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
-    tfit = np.linspace(1, 5.3, 50)
-    ytrue = np.sin(tfit)
-
     model1 = Model(span * np.ones_like(t))
     model2 = Model(span)
     assert_allclose(model1.fit(t, y, dy).cv_values(),
@@ -90,7 +85,8 @@ def test_variable_sine_crossval(Model, span):
 def test_func_span_const(Model, span):
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
-    spanfunc = lambda t, span=span: span * np.ones_like(t)
+    def spanfunc(t, span=span):
+        return span * np.ones_like(t)
 
     model1 = Model(span)
     model2 = Model(spanfunc)
@@ -102,7 +98,8 @@ def test_func_span_const(Model, span):
 def test_func_span_variable(Model):
     t, y, dy = make_sine(N=100, err=0.05, rseed=0)
 
-    spanfunc = lambda t, tmax=t.max(): 0.5 + 0.05 * t / tmax
+    def spanfunc(t, tmax=t.max()):
+        return 0.5 + 0.05 * t / tmax
     span = spanfunc(t)
 
     model1 = Model(span)
@@ -141,7 +138,7 @@ def test_span_extremes(Model, span):
     model1 = Model(span).fit(t, y, dy)
     model2 = Model(span + np.zeros_like(t)).fit(t, y, dy)
     assert_allclose(model1.cv_values(False), model2.cv_values(False))
-    
+
 
 @pytest.mark.parametrize("Model", [MovingAverageSmoother, LinearSmoother])
 @pytest.mark.parametrize("span", [3, 4, 5])
