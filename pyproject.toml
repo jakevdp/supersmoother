@@ -1,3 +1,33 @@
+[project]
+name = "supersmoother"
+dynamic = ["version"]
+description = "Python implementation of Friedman's Supersmoother"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+authors = [{name = "Jake VanderPlas"}]
+classifiers = [
+    "Programming Language :: Python",
+    "Intended Audience :: Science/Research",
+]
+keywords = []
+dependencies = ["numpy"]
+
+[project.urls]
+homepage = "https://github.com/jakevdp/supersmoother"
+repository = "https://github.com/jakevdp/supersmoother"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-xdist",
+    "scipy",
+]
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "supersmoother.__version__"}
