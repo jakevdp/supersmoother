@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .smoother import LinearSmoother
 from .utils import multinterp, setattr_context
@@ -40,9 +41,10 @@ class SuperSmoother(LinearSmoother):
     [1] Friedman 1984, "A Variable Span Smoother"
         http://www.slac.stanford.edu/cgi-wrap/getdoc/slac-pub-3477.pdf
     """
-    def __init__(self, alpha=None, period=None,
-                 primary_spans=(0.05, 0.2, 0.5),
-                 middle_span=0.2, final_span=0.05):
+    def __init__(self, alpha: ArrayLike | None = None,
+                 period: float | None = None,
+                 primary_spans: tuple[float, ...] = (0.05, 0.2, 0.5),
+                 middle_span: float = 0.2, final_span: float = 0.05):
         self.alpha = alpha
         self.period = period
         self.primary_spans = np.sort(np.unique(primary_spans))
@@ -51,7 +53,7 @@ class SuperSmoother(LinearSmoother):
         self.primary_smooths = [LinearSmoother(span, period)
                                 for span in self.primary_spans]
 
-    def _fit(self, t, y, dy):
+    def _fit(self, t: np.ndarray, y: np.ndarray, dy: np.ndarray) -> None:
         mid_smooth = LinearSmoother(self.middle_span, self.period)
 
         # 1. Compute three smoothed curves and get residuals
@@ -97,12 +99,12 @@ class SuperSmoother(LinearSmoother):
         # functions behave) set span to the spansmoother predict function.
         self.span = self.spansmoother.predict
 
-    def _predict(self, t):
+    def _predict(self, t: ArrayLike) -> np.ndarray:
         # temporarily change y and span:
         with setattr_context(self, y=self.ysmooth_raw, span=self.final_span):
             return LinearSmoother._predict(self, t)
 
-    def _cv_values(self, cv=True):
+    def _cv_values(self, cv: bool = True) -> np.ndarray:
         # temporarily change y and span:
         with setattr_context(self, y=self.ysmooth_raw, span=self.final_span):
             # Use cv=False in all circumstances: CV is built into ysmooth_raw.
