@@ -21,7 +21,6 @@ repository = "https://github.com/jakevdp/supersmoother"
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-xdist",
     "scipy",
 ]
 
