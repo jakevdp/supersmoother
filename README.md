@@ -31,10 +31,15 @@ You can see these in the `examples/` directory, or view them statically
 
 ## Testing
 This code has full unit tests implemented using [pytest](https://pytest.org).
-They can be run as follows from the source directory:
+To install the latest release and run its tests, use:
+```
+$ pip install supersmoother[dev]
+$ pytest --pyargs supersmoother
+```
+To install from source and run the tests from within the source directory, use:
 ```
 $ pip install .[dev]
-$ pytest -n auto supersmoother
+$ pytest supersmoother
 ```
 The package is tested with Python versions 3.10 through 3.14.
 
