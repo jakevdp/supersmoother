@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: pre-commit lint
+  lint_and_typecheck:
+    name: lint and typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
@@ -27,10 +27,25 @@ jobs:
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
         with:
           python-version: 3.13
-      - name: Install and run pre-commit
-        run: |
-          python -m pip install pre-commit
-          pre-commit run --show-diff-on-failure --color=always --all-files
+      - name: Install dependencies
+        run: python -m pip install pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
+  smoketest:
+    name: Smoketest with minimal requirements
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.13
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        with:
+          python-version: 3.13
+      - name: Install dependencies
+        run: python -m pip install .
+      - name: Run test
+        run: python -c "from supersmoother import SuperSmoother; assert SuperSmoother().fit(range(100), range(100)).predict(50) == 50"
   build:
     name: ${{ matrix.os }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
