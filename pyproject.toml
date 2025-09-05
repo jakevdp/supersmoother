@@ -35,6 +35,9 @@ packages = ["supersmoother"]
 [tool.setuptools.dynamic]
 version = {attr = "supersmoother.__version__"}
 
+[tool.setuptools.package-data]
+supersmoother = ["py.typed"]
+
 [tool.ruff]
 exclude = [
     "*.ipynb",
