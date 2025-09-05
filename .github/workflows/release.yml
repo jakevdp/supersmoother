@@ -27,9 +27,8 @@ jobs:
           name: build-artifacts
           path: dist/
 
-  download_and_list_artifacts:
-    # This is useful for debugging problems with the wheels and source distributions.
-    name: Download and list artifacts
+  test_build_artifacts:
+    name: Test build artifacts
     needs: [build]
     runs-on: ubuntu-latest
     steps:
@@ -39,6 +38,10 @@ jobs:
           path: dist/
       - name: List files
         run: ls -l dist/
+      - name: Install and test wheel
+        run: |
+          python -m pip install $(ls dist/*.whl)[dev]
+          pytest --pyargs supersmoother
 
   upload_to_pypi:
     # This publishes to PyPI only in the case of a published release.
