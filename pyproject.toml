@@ -29,6 +29,9 @@ dev = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["supersmoother"]
+
 [tool.setuptools.dynamic]
 version = {attr = "supersmoother.__version__"}
 
