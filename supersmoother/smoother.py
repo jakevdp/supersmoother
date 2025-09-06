@@ -122,7 +122,11 @@ class SpannedSmoother(Smoother):
         else:
             spanint = np.asarray(self.span) * len(self.t)
 
-        return np.clip(spanint, 3, None)
+        # A minimum span of 5 ensures a span of 3 at the edges (due to the
+        # current handling of the edges) and thus at least 2 points after
+        # removing the center.  Lower spans do not ensure this property and
+        # result in fit failures.
+        return np.clip(spanint, 5, None)
 
     def _predict(self, t: ArrayLike) -> np.ndarray:
         if callable(self.span):
