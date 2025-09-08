@@ -122,7 +122,9 @@ class SpannedSmoother(Smoother):
         else:
             spanint = np.asarray(self.span) * len(self.t)
 
-        return np.clip(spanint, 3, None)
+        # ensure spanint is an odd integer >= 3.
+        spanint = np.clip(spanint.astype(int), 3, None)
+        return np.where(spanint % 2, spanint, spanint + 1)
 
     def _predict(self, t: ArrayLike) -> np.ndarray:
         if callable(self.span):
