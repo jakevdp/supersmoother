@@ -42,7 +42,9 @@ def windowed_sum_slow(arrays: Sequence[ArrayLike],
     arrays : tuple of ndarrays
         arrays containing the windowed sum of each input array
     """
-    span = np.asarray(span, dtype=int)
+    span = np.asarray(span)
+    if not np.issubdtype(span.dtype, np.integer):
+        raise TypeError("span values must be integral")
     if not np.all(span > 0):
         raise ValueError("span values must be positive")
 
@@ -127,7 +129,9 @@ def windowed_sum(arrays: Sequence[ArrayLike],
     arrays : tuple of ndarrays
         arrays containing the windowed sum of each input array
     """
-    span = np.asarray(span, dtype=int)
+    span = np.asarray(span)
+    if not np.issubdtype(span.dtype, np.integer):
+        raise TypeError("span values must be integral")
     if not np.all(span > 0):
         raise ValueError("span values must be positive")
 
