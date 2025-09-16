@@ -19,8 +19,9 @@ def make_linear(N=100, err=1E-6, rseed=None):
     return t, y, err
 
 
-def test_sine():
-    t, y, dy = make_sine(N=100, err=0.05, rseed=0)
+@pytest.mark.parametrize("N", [80, 100])
+def test_sine(N):
+    t, y, dy = make_sine(N=N, err=0.05, rseed=0)
 
     tfit = np.linspace(1, 5.3, 50)
     ytrue = np.sin(tfit)
@@ -31,8 +32,9 @@ def test_sine():
     assert_array_less(obs_err, 0.001)
 
 
-def test_sine_period():
-    t, y, dy = make_sine(N=100, err=0.05, rseed=0, n_periods=3)
+@pytest.mark.parametrize("N", [80, 100])
+def test_sine_period(N):
+    t, y, dy = make_sine(N=N, err=0.05, rseed=0, n_periods=3)
 
     tfit = np.linspace(-5, 5, 50)
     ytrue = np.sin(tfit)
