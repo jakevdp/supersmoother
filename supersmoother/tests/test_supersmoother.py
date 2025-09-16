@@ -5,9 +5,9 @@ import pytest
 from .. import SuperSmoother, LinearSmoother
 
 
-def make_sine(N=100, err=0.05, rseed=None):
+def make_sine(N=100, err=0.05, rseed=None, n_periods=1):
     rng = np.random.RandomState(rseed)
-    t = 2 * np.pi * rng.rand(N)
+    t = 2 * np.pi * n_periods * rng.rand(N)
     y = np.sin(t) + err * rng.randn(N)
     return t, y, err
 
@@ -26,6 +26,18 @@ def test_sine():
     ytrue = np.sin(tfit)
 
     model = SuperSmoother().fit(t, y, dy)
+    yfit = model.predict(tfit)
+    obs_err = np.mean((yfit - ytrue) ** 2)
+    assert_array_less(obs_err, 0.001)
+
+
+def test_sine_period():
+    t, y, dy = make_sine(N=100, err=0.05, rseed=0, n_periods=3)
+
+    tfit = np.linspace(-5, 5, 50)
+    ytrue = np.sin(tfit)
+
+    model = SuperSmoother(period=2 * np.pi).fit(t, y, dy)
     yfit = model.predict(tfit)
     obs_err = np.mean((yfit - ytrue) ** 2)
     assert_array_less(obs_err, 0.001)
